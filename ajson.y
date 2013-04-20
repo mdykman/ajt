@@ -2,7 +2,7 @@
 #include<stdio.h>
 #include<math.h>
 #include<string.h>
-#include "ajson.h"
+#include "ajt.h"
 #include "ajson.l.h"
 
 #define jsonparserabort(x) return(x)

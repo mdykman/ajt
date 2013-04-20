@@ -1,6 +1,6 @@
 %{
 
-#include "ajson.h"
+#include "ajt.h"
 #include "ajson.y.h"
 
 void pEsc(char**target,const char* text);
