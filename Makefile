@@ -4,15 +4,17 @@ BISONPREFIX=json
 CFLAGS= -DBISONPREFIX=${BISONPREFIX} -fPIC
 LDFLAGS=-lm
 
-all: json-tool ajtlib
+all: json-tool libajt.so libajt.a
 
 clean:
-	-rm ajson.l.o ajson.y.o ajson.y.c ajson.l.c json-tool
+	-rm ajson.l.o ajson.y.o ajson.y.c ajson.l.c json-tool libajt.a libajt.so
 
 
-ajtlib	: ajson.l.o json-tool.o
+libajt.a	: ajson.l.o json-tool.o
+	ar rcs  libajt.a ajson.y.o ajson.l.o 
+
+libajt.so	: ajson.l.o json-tool.o
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
-#	${CC} -static -llibrary ajson.y.o ajson.l.o  -o libajt.a
 
 json-tool : ajson.y.o ajson.l.o json-tool.o
 	${CC} -lm ajson.y.o ajson.l.o json-tool.o -o json-tool
