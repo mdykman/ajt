@@ -18,22 +18,12 @@
 
 
 
-ajson
-ajson.l.c
-ajson.l.h
-ajson.png
-ajson.y.c
-ajson.y.dot
-ajson.y.dot.png
-ajson.y.h
-ajson.y.output
-dat.json
-dat2.json
+*.y.c
+*.y.h
+*.l.c
+*.l.h
+*.json
 idea.jst
-ig
-jpath.c
-jpath.html
-jpath.y
 jpath/j.lex
 jpath/jpath.l.c
 jpath/jpath.l.h
@@ -43,16 +33,3 @@ jpath/jpath.y.h
 jpath/lex.yy.c
 jpath/y.output
 jpath/y.tab.c
-json-single
-json-test
-json-test.c
-json-tool
-json.l.y
-minify
-minify.c
-scb
-scb.c
-t
-test2.json
-test3.json
-y.tab.c
