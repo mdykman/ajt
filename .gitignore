@@ -16,6 +16,7 @@
 *.out
 *.app
 
+json-tool
 
 
 *.y.c

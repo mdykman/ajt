@@ -109,6 +109,10 @@ extern int parseJsonString(const char*s,int jtl) ;
 extern JsonNode* jsonBuildJsonTreeFromString(const char *s) ;
 extern JsonNode* jsonBuildJsonTreeFromFile(FILE *f) ;
 
+extern JsonNode* jsonBuildTreeFromFile(FILE *fi,int jtl); 
+extern JsonNode* jsonBuildTreeFromString(const char* s,int jtl); 
+
+extern JsonNode* jsonCloneNode(JsonNode* jn);
 extern JsonNode* jsonGetMember(JsonNode* obj,const char *name);
 
 extern JsonNode* jsonBuildJtlTreeFromString(const char *s) ;

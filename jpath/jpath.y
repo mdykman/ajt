@@ -265,70 +265,26 @@ strop
 
 %% 
 
-
-/*
-   typedef JsonNode* (*jpathproc)(JsonNode*context,JsonNode*array);
-
-   typedef struct __jpathnode {
-      jpathproc proc;
-      JsonNode *params;
-      struct __jpathnode *next;
-   } jpathnode;
-
-
-
-
-*/
-
-//   typedef JsonNode* (*jpathproc)(JsonNode*context,JsonNode*array,jpathnode*next);
-	
-JsonNode *jpathStar(JsonNode *ctx,JsonNode *prm) {
-	if(
-}
-
-#define JSONMAPFUNC 
-JsonNode *jpathExecute(JsonNode *context,jpathnode *jn) {
-	JsonNode *res = jn->proc(ctx,jx->params);
-	if(jn->next == NULL) {
-		jsonArrayAppend(frame,res);
+JsonNode *jpathExecute(JsonNode *ctx,jpathnode *jn) {
+	if(ctx->type != TYPE_ARRAY) {
+		JsonNode *cl = jsonCloneNode(ctx);
+		ctx = jsonCreateArray(NULL);
+		jsonArrayAppend(ctx,cl);
+	}
+	JsonNode *cl = jsonCreateArray(NULL);
+	JsonNode *eech = ctx->first;
+	while(eech != NULL) {
+		jsonArrayAppend(cl,jn->proc(eech,jn->params));	
+		eech = eech->next;
+	}
+	JsonNode * result;
+	if(jn->next != NULL) {
+		result = jpathExecute(cl,jn->next);
+		jsonFree(cl);
 	} else {
-		res = jpathExecute(res,frame,jn->next);
+		result = cl;
 	}
-	return frame;
-}
-JsonNode *jpathExecuteChain(JsonNode *context,jpathnode *jn) {
-	jpathnode * jx = jn;
-	JsonNode *ctx = context;
-	JsonNode *frame = jsonCreateArray(NULL);
-
-	while(jx != NULL) {
-		JsonNode *res = jx->proc(ctx,jx->params);
-		if(res != NULL) {
-			if(res->type == TYPE_ARRAY) {
-				JsonNode *eech = res->first;
-				while(eech == NULL) {
-					jpathExecutePath(eech,jn-
-
-					eech = eech->next;
-				}
-
-			}
-			ctx = jx->proc(ctx,jx->params);
-
-		}
-		jx = jx->next;
-	}
-	return ctx;
-}
-
-JsonNode *jpathExecuteChain(JsonNode *context,jpathnode *jn) {
-	jpathnode * jx = jn;
-	JsonNode *ctx = context;
-	while(jx != NULL) {
-		ctx = jx->proc(ctx,jx->params);
-		jx = jx->next;
-	}
-	return ctx;
+	return result;
 }
 
 int parseJpath(const char *s) {

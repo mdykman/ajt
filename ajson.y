@@ -48,10 +48,6 @@ extern const jax_callbacks single_callback ;
 
 //extern int  allowErrors;
 
-JsonNode* jsonBuildTreeFromFile(FILE *fi,int jtl); 
-JsonNode* jsonBuildTreeFromString(const char* s,int jtl); 
-
-JsonNode* jsonCloneNode(JsonNode* jn);
 #define YYERROR_VERBOSE 1
 %}
 
