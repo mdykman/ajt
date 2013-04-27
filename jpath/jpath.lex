@@ -1,12 +1,20 @@
 %{
 
-#include "jpath.y.h"
 
 int yycolumn = 1;
 
-#define YY_USER_ACTION { jpathlloc.first_line = jpathlloc.last_line = yylineno; \
+#include "jpath.y.h"
+
+#define YY_USER_ACTION 				\
+	{ jpathlloc.first_line = jpathlloc.last_line = yylineno; \
 	jpathlloc.first_column = yycolumn; jpathlloc.last_column = yycolumn+yyleng-1; \
 	yycolumn += yyleng; }
+
+
+
+//#define YY_DECL int jpathlex (void)
+
+//extern void yyterminate();
 
 %}
 
@@ -97,7 +105,7 @@ if { return IF; }
 sort { return SORT; }
 uniq { return UNIQ; }
 
-key { return KEY; }
+key { return QKEY; }
 value { return VALUE; } 
 name { return NAME; } 
 
@@ -128,10 +136,7 @@ lte { return LTES; }
 
 [$a-zA-Z_][$a-zA-Z0-9_-]+      { return LABEL; }
 
-. {
-	// this should match anything
-	
-// matches garbage
+. { // matches garbage
 	yyterminate();
 }
 

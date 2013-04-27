@@ -13,7 +13,6 @@
 // count(**/email)
 // **/email/count()
 
-#include "jpath.l.h"
 
 #define JPATHALLOC(x)  malloc(x)
 #define JPATHFREE(x)  free(x)
@@ -36,12 +35,17 @@
 
 
 
+
+#include "jpath.l.h"
+
+
 %}
 
 %code requires {
-	typedef struct __jpathnode {
-	} jpathnode;
+#include "../ajt.h"
+#include "jpath.h"
 }
+
 %union {
 	jpathnode *jp;
 	char*str;
@@ -49,7 +53,8 @@
 
 %locations
 
-%type<str> chars
+%type<str> chars dstr sstr string
+%type<str> builtin arithop miscop agop strop 
 
 %token<str> LABEL CHAR  
 %token FLOAT 
@@ -58,7 +63,7 @@
 %token<jp> DDOT TDOT DSTAR 
 %token<str> LTE GTE NE SQRT POW FLOOR CIEL ROUND RAND DIV
 %token<str> NUMBER TEXT SCALAR ARRAY OBJECT NULLV NAME
-%token<str> GROUP IF SORT UNIQ KEY VALUE AVG MIN MAX SIZE SUM
+%token<str> GROUP IF SORT UNIQ QKEY VALUE AVG MIN MAX SIZE SUM
 %token<str> SIN COS LOG
 %token<str> STRINGF CONCAT UPPER LOWER EQ NEQ GT LT GTES LTES SUBSTR MATCH INDEXOF RSUB
 
@@ -128,11 +133,12 @@ ttop
    | NULLV
 
 pexp
-	: var
-	| const
+	: const
 	| fcall
 	| '(' jpath ')'
-
+	/*
+	| var
+  */
 fcall 
 	: func '(' plist ')'
 	| func '(' ')'
@@ -152,6 +158,23 @@ step: fstep
 bstep
 	: DDOT  
 	| TDOT
+/*
+builtin
+arithop
+miscop
+agop 
+strop 
+rangexp
+dex
+chars
+dstr 
+sstr 
+string
+var
+label
+const
+fstep
+*/
 
 fstep
 	: '*' 
@@ -163,7 +186,9 @@ const
 	| INTEGER
 	| FLOAT
 
+/*
 var : '$' label
+*/
 
 string
    : dstr { $$ = $1; }
@@ -171,11 +196,11 @@ string
 
 sstr 
 	: '"' chars '"' { $$ = $2; }
-	| '"' '"'
+	| '"' '"' { $$ = ""; }
 
 dstr 
-	: '\'' chars '\''
-	| '\'' '\''
+	: '\'' chars '\'' { $$ = $2; }
+	| '\'' '\'' { $$ = ""; }
 
 chars
 	: CHAR { $$ = $1; }
@@ -212,7 +237,7 @@ miscop
    | IF { $$ = $1; }
    | SORT { $$ = $1; }
    | UNIQ { $$ = $1; }
-   | KEY { $$ = $1; }
+   | QKEY { $$ = $1; }
    | VALUE { $$ = $1; }
 
 agop 
@@ -241,6 +266,70 @@ strop
 %% 
 
 
+/*
+   typedef JsonNode* (*jpathproc)(JsonNode*context,JsonNode*array);
+
+   typedef struct __jpathnode {
+      jpathproc proc;
+      JsonNode *params;
+      struct __jpathnode *next;
+   } jpathnode;
+
+
+
+
+*/
+
+//   typedef JsonNode* (*jpathproc)(JsonNode*context,JsonNode*array,jpathnode*next);
+	
+JsonNode *jpathStar(JsonNode *ctx,JsonNode *prm) {
+	if(
+}
+
+#define JSONMAPFUNC 
+JsonNode *jpathExecute(JsonNode *context,jpathnode *jn) {
+	JsonNode *res = jn->proc(ctx,jx->params);
+	if(jn->next == NULL) {
+		jsonArrayAppend(frame,res);
+	} else {
+		res = jpathExecute(res,frame,jn->next);
+	}
+	return frame;
+}
+JsonNode *jpathExecuteChain(JsonNode *context,jpathnode *jn) {
+	jpathnode * jx = jn;
+	JsonNode *ctx = context;
+	JsonNode *frame = jsonCreateArray(NULL);
+
+	while(jx != NULL) {
+		JsonNode *res = jx->proc(ctx,jx->params);
+		if(res != NULL) {
+			if(res->type == TYPE_ARRAY) {
+				JsonNode *eech = res->first;
+				while(eech == NULL) {
+					jpathExecutePath(eech,jn-
+
+					eech = eech->next;
+				}
+
+			}
+			ctx = jx->proc(ctx,jx->params);
+
+		}
+		jx = jx->next;
+	}
+	return ctx;
+}
+
+JsonNode *jpathExecuteChain(JsonNode *context,jpathnode *jn) {
+	jpathnode * jx = jn;
+	JsonNode *ctx = context;
+	while(jx != NULL) {
+		ctx = jx->proc(ctx,jx->params);
+		jx = jx->next;
+	}
+	return ctx;
+}
 
 int parseJpath(const char *s) {
    YY_BUFFER_STATE buff = SCANSTRING(s);

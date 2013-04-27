@@ -1,10 +1,9 @@
 
 all : jpath.y.o jpath.l.o
 
-jpath.y.h : jpath.y.c
+clean :
+	-rm *.o jpath.y.c jpath.l.c jpath.y.h
 
-jpath.y.c : jpath.y
+jpath.l.c jpath.y.c jpath.y.h : jpath.y jpath.lex
 	yacc -p jpath --defines="jpath.y.h" -o jpath.y.c jpath.y
-
-jpath.l.c: jpath.lex
 	flex jpath.lex

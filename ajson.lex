@@ -99,19 +99,22 @@ null { return NULLVAL; }
     /* ignore line comments */
 [/][/].*$    {  }
 
-[,]		{ return ','; }
-[:]		{  return ':'; }
-[[]		{  return '['; }
-[\]]		{  return ']'; }
-[(]		{  return '('; }
-[)]		{  return ')'; }
-[{]		{  return '{'; }
-[}]		{  return '}'; }
+[,]		{ ++yycolumn; return ','; }
+[:]		{  ++yycolumn; return ':'; }
+[[]		{  ++yycolumn; return '['; }
+[\]]		{  ++yycolumn; return ']'; }
+[(]		{  ++yycolumn; return '('; }
+[)]		{  ++yycolumn; return ')'; }
+[{]		{  ++yycolumn; return '{'; }
+[}]		{  ++yycolumn; return '}'; }
 
 
-[ \r\t]+ {  }
 
 ([\r][\n])|[\r]|[\n]  {   yycolumn = 1; }
+
+[ \t]+ {  }
+
+<<EOF>> { return EEOF; }
 
 .   { 
 		  

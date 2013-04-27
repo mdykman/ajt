@@ -65,7 +65,7 @@ JsonNode* jsonCloneNode(JsonNode* jn);
 
 %locations
 
-%token NULLVAL BADTOKEN 
+%token NULLVAL BADTOKEN EEOF
 %token<i> INTEGER 
 %token<f> FLOAT
 %token<str> CHAR LABEL GARBAGE
@@ -104,7 +104,7 @@ json : item endp {
 	}
 
 jsonp 
-	: LABEL '(' alistitem ')' endp {
+	: LABEL '(' alistitem ')' endp EEOF {
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @5.last_column == -1 ? @4.last_column : @5.last_column ;
