@@ -271,11 +271,21 @@ JsonNode *jpathExecute(JsonNode *ctx,jpathnode *jn) {
 		ctx = jsonCreateArray(NULL);
 		jsonArrayAppend(ctx,cl);
 	}
-	JsonNode *cl = jsonCreateArray(NULL);
-	JsonNode *eech = ctx->first;
-	while(eech != NULL) {
-		jsonArrayAppend(cl,jn->proc(eech,jn->params));	
-		eech = eech->next;
+	JsonNode *cl;
+	if(jn->aggregate) {
+		cl = jn->proc(ctx,jn->params);
+	} else {
+		cl = jsonCreateArray(NULL);
+		JsonNode *eech = ctx->first;
+		while(eech != NULL) {
+			JsonNode *ir = jn->proc(eech,jn->params);
+			if(ir->type == TYPE_ARRAY) {
+				jsonArrayAppendAll(cl,ir);	
+			} else {
+				jsonArrayAppend(cl,ir);	
+			}
+			eech = eech->next;
+		}
 	}
 	JsonNode * result;
 	if(jn->next != NULL) {

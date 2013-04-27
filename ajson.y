@@ -728,6 +728,16 @@ int jsonObjectAppend(JsonNode *object,const char*key,JsonNode *ch) {
 	return 1;
 }
 
+int jsonArrayAppendAll(JsonNode *array,JsonNode *ch) {
+	JsonNode *next = ch->first;
+	int ctr = 0;
+	while(next!=NULL) {
+		jsonArrayAppend(array,next);
+		next = next->next;
+		++ctr;
+	}
+	return ctr;
+}
 int jsonArrayAppend(JsonNode *array,JsonNode *ch) {
 	if(array->type != TYPE_ARRAY) {
 		return -1;

@@ -10,6 +10,7 @@ typedef JsonNode* (*jpathproc)(JsonNode*context,JsonNode*array);
 	typedef struct __jpathnode {
 		jpathproc proc;
 		JsonNode *params;
+		int aggregate;
 		struct __jpathnode *next;
 	} jpathnode;
 

@@ -92,7 +92,7 @@ extern jax_callbacks __jax_default_callbacks;
  extern void setAllowErrors(int a);
  extern void setAllowJxt(int a);
  extern int parseJsonFile(FILE*f,int jtl);
-extern int parseJsonString(const char*s,int jtl) ;
+ extern int parseJsonString(const char*s,int jtl) ;
 
   extern JsonNode* jsonNewNode(JsonNode* parent,jsonnodetype t,const char* str, long ival, double fval) ;
   extern JsonNode* jsonCreateString(JsonNode*p,const char*str) ;
@@ -103,6 +103,7 @@ extern int parseJsonString(const char*s,int jtl) ;
 
   extern int jsonObjectAppend(JsonNode *object,const char*key,JsonNode *ch) ;
   extern int jsonArrayAppend(JsonNode *array,JsonNode *ch) ;
+	extern int jsonArrayAppendAll(JsonNode *array,JsonNode *ch) ;
   
 
 

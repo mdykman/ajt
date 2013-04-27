@@ -16,6 +16,8 @@
 *.out
 *.app
 
+*.output
+
 json-tool
 
 
