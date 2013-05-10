@@ -1,27 +1,25 @@
 %{
 
 
-int yycolumn = 1;
+extern int jpathcolumn;
+
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "jpath.y.h"
 
 #define YY_USER_ACTION 				\
 	{ jpathlloc.first_line = jpathlloc.last_line = yylineno; \
-	jpathlloc.first_column = yycolumn; jpathlloc.last_column = yycolumn+yyleng-1; \
-	yycolumn += yyleng; }
-
-
-
-//#define YY_DECL int jpathlex (void)
-
-//extern void yyterminate();
+	jpathlloc.first_column = jpathcolumn; jpathlloc.last_column = jpathcolumn+yyleng-1; \
+	jpathcolumn += yyleng; }
 
 %}
 
 %Start STRING SSTRING
 
 %option prefix="jpath" header-file="jpath.l.h" outfile="jpath.l.c"
-%option nodefault noyywrap
+%option nodefault noyywrap yylineno
 
 %%
 

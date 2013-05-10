@@ -1,4 +1,6 @@
 
+#CFLAGS=-std=c99
+
 all : jpath.y.o jpath.l.o
 
 clean :

@@ -119,4 +119,6 @@ extern JsonNode* jsonGetMember(JsonNode* obj,const char *name);
 extern JsonNode* jsonBuildJtlTreeFromString(const char *s) ;
 extern JsonNode* jsonBuildJtlTreeFromFile(FILE *f) ;
 
+extern void jsonFree(JsonNode*js) ;
+
 #endif
