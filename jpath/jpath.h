@@ -43,6 +43,8 @@ JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p);
 
-JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
+//JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
 
+JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
+JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
 #endif // end of file

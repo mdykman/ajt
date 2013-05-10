@@ -273,6 +273,23 @@ strop
 
 #define JSONNODESETINIT 1024
 
+/*
+const char* jsonToString(JsonNode *j) {
+}
+JsonNodeSet *__jpconcat(JsonNodeSet *ctx,JpathNode **jn) {
+	JSONTESTPARAMS(jn,-1);
+	JpathNode**p = jn;
+	int i = 0;
+	for(; *p != NULL; ++p) {
+		JpathNode *ps = jsonGetJpathParam(jn,0);
+		JsonNodeSet* rs = jpathExecute(ctx,ps);
+		JsonNode*r=jsonNodeSetGet(rs,0);
+		
+	}
+
+	JsonNodeSet *rjns = newJsonNodeSet();
+}
+*/
 JsonNodeSet * newJsonNodeSet() {
 	JsonNodeSet*result = (JsonNodeSet*)JPATHALLOC(sizeof(JsonNodeSet));
 	result->nodes = (JsonNode**) JPATHALLOC(JSONNODESETINIT * sizeof(JsonNode*));
@@ -280,6 +297,7 @@ JsonNodeSet * newJsonNodeSet() {
 	result->count = 0;
 	return result;
 }
+
 void freeJsonNodeSet(JsonNodeSet *js) {
 	JPATHFREE(js->nodes);
 	JPATHFREE(js);
@@ -301,7 +319,7 @@ void addJsonNodeSet(JsonNodeSet*jns,JsonNodeSet*other) {
 	}
 }
 
-int jsonTestBoolean(JsonNode*ctx) {
+int jsonTestBooleanNode(JsonNode*ctx) {
 	switch(ctx->type) {
 		case TYPE_STRING:
 			if(ctx->str != NULL && strlen(ctx->str) > 0) {
@@ -355,7 +373,7 @@ JpathNode* jsonGetJpathParam(JpathNode**ptr,int x)  {
 		}				\
 	} }
 	
-int testBoolean(JsonNodeSet*test) {
+int jsonTestBoolean(JsonNodeSet*test) {
 	int result	;
 	if(test->count == 0) {
 		result = 0;
@@ -363,28 +381,29 @@ int testBoolean(JsonNodeSet*test) {
 		result = 1;
 	} else {
 		JsonNode*jn = test->nodes[0];
-		result = jsonTestBoolean(jn);
+		result = jsonTestBooleanNode(jn);
 	}
 	return result;
 }
+JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode **p) {
+	JpathNode *p1 = jsonGetJpathParam(p,0);
+	if(p1!=NULL) {
+		ctx=__jpathExecute(ctx,p1);
+	}
+	return NULL;
+}
+
 JsonNodeSet *jpathIf(JsonNodeSet *ctx,JpathNode **jn) {
 	JSONTESTPARAMS(jn,1);
 	JpathNode *p1 = jsonGetJpathParam(jn,0);
 	JsonNodeSet *rjns = newJsonNodeSet();
-	JsonNodeSet *params = newJsonNodeSet();
-	// fake insert
-	addJsonNode(params, jsonCreateNumber(NULL,0,0));
-	jsonFree(params->nodes[0]);
-
 	int i=0;
 	for(;i<ctx->count;++i) {
-		params->nodes[0] = ctx->nodes[i];
-		JsonNodeSet*test=jpathExecute(params,jn[0]);
-		if(testBoolean(test)) {
+		JsonNode*test=jpathExecute(ctx->nodes[i],jn[0]);
+		if(jsonTestBooleanNode(test)) {
 			addJsonNode(rjns,ctx->nodes[i]);
 		}
 	}
-	freeJsonNodeSet(params);
 	return rjns;
 }
 
@@ -393,9 +412,11 @@ JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) {
 		return newJsonNodeSet();
 	}
 
-	JpathNode *p1 = jsonGetJpathParam(p,0);
-	if(p1!=NULL) {
-		ctx=jpathExecute(ctx,p1);
+	int freeCtx = 0;
+	JsonNodeSet *_ctx = tempContext(ctx,p);
+	if(_ctx != NULL) {
+		ctx = _ctx;
+		freeCtx = 1;
 	}
 
 	JsonNodeSet *rs = __jpsum(ctx,NULL);
@@ -405,7 +426,6 @@ JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) {
 		double df = r->fval / ctx->count;
 		r->ival = (long) df;
 		r->fval = df;
-		return rs;
 	} else if(r->type == TYPE_OBJECT) {
 		JsonNode*key=r->first;
 		while(key!=NULL) {
@@ -416,9 +436,12 @@ JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) {
 			v->fval = df;
 			key=key->next;
 		}
-		return rs;
+	} else {
+		rs = NULL;
 	}
-	return NULL;
+
+	if(freeCtx) freeJsonNodeSet(ctx);
+	return rs;
 }
 
 JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p) {
@@ -428,9 +451,15 @@ JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p) {
 }
 
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p) {
-	JpathNode *p1 = jsonGetJpathParam(p,0);
-	if(p1!=NULL) {
-		ctx=jpathExecute(ctx,p1);
+	if(ctx->count == 0) {
+		return newJsonNodeSet();
+	}
+
+	int freeCtx = 0;
+	JsonNodeSet *_ctx = tempContext(ctx,p);
+	if(_ctx != NULL) {
+		ctx = _ctx;
+		freeCtx = 1;
 	}
 
 	double total = 0;
@@ -442,17 +471,23 @@ JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p) {
 	for(;i<ctx->count;++i) {
 		total = total > ctx->nodes[i]->fval ? total : ctx->nodes[i]->fval;
 	}
+	if(freeCtx) freeJsonNodeSet(ctx);
 	JsonNodeSet * ns = newJsonNodeSet();
 	addJsonNode(ns,jsonCreateNumber(NULL,(long)total,total));
 	return ns;
 }
 
 JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p) {
-	JpathNode *p1 = jsonGetJpathParam(p,0);
-	if(p1!=NULL) {
-		ctx=jpathExecute(ctx,p1);
+	if(ctx->count == 0) {
+		return newJsonNodeSet();
 	}
 
+	int freeCtx = 0;
+	JsonNodeSet *_ctx = tempContext(ctx,p);
+	if(_ctx != NULL) {
+		ctx = _ctx;
+		freeCtx = 1;
+	}
 	double total = 0;
 	if(ctx->count>0) {
 		total = ctx->nodes[0]->fval;
@@ -462,17 +497,10 @@ JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p) {
 	for(;i<ctx->count;++i) {
 		total = total < ctx->nodes[i]->fval ? total : ctx->nodes[i]->fval;
 	}
+	if(freeCtx) freeJsonNodeSet(ctx);
 	JsonNodeSet * ns = newJsonNodeSet();
 	addJsonNode(ns,jsonCreateNumber(NULL,(long)total,total));
 	return ns;
-}
-
-JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode **p) {
-	JpathNode *p1 = jsonGetJpathParam(p,0);
-	if(p1!=NULL) {
-		ctx=jpathExecute(ctx,p1);
-	}
-	return NULL;
 }
 
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p) {
@@ -493,7 +521,7 @@ JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p) {
 			double total;
 			int i=0;
 			for(;i<ctx->count;++i) {
-				total += isnan(ctx->nodes[i]->fval) ? NAN : ctx->nodes[i]->fval;
+				total += ctx->nodes[i]->fval;
 			}
 			// TODO:: this guy is a mem-leak candidate
 			addJsonNode(res,jsonCreateNumber(NULL,(long)total,total));
@@ -536,23 +564,15 @@ JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, in
 	return jp;
 }
 
+JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) {
+	JsonNodeSet *_ctx = newJsonNodeSet();
+	addJsonNode(_ctx,ctx);
+	JsonNodeSet *rs = __jpathExecute(_ctx,jn);
+	freeJsonNodeSet(_ctx);
+	return jsonNodeSetGet(rs,0);
 
-/*
-
-JsonNodeSet *jpathExecuteMul(JsonNodeSet *ctx,JpathNode *jn) {
-	JsonNodeSet *rjns = newJsonNodeSet();
-	int i;
-	for(i=0; i < ctx->count; ++i) {
-		JsonNodeSet * res = jPathExecute(ctx->nodes[i],jn);
-		jsonAddJpathNodeSet(rjns,res);
-		freeJsonNodeSet(res);
-	}
-	return rjns;
 }
-
-*/
-
-JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) {
+JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) {
 
 	JsonNodeSet *rjns;
 	if(jn->aggr) {
@@ -569,6 +589,7 @@ JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) {
 				params->nodes[0] = ctx->nodes[i];
 				JsonNodeSet *ir = jn->proc(params,jn->params);
 				addJsonNodeSet(rjns,ir);
+				freeJsonNodeSet(ir);
 			}
 			freeJsonNodeSet(params);
 		}
@@ -576,7 +597,7 @@ JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) {
 
 	JsonNodeSet * result;
 	if(jn->next != NULL) {
-		result = jpathExecute(rjns,jn->next);
+		result = __jpathExecute(rjns,jn->next);
 		freeJsonNodeSet(rjns);
 	} else {
 		result = rjns;
