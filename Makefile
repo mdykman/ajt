@@ -4,12 +4,20 @@ BISONPREFIX=json
 CFLAGS= -DBISONPREFIX=${BISONPREFIX} -fPIC
 LDFLAGS=-lm
 
-all: json-tool libajt.so libajt.a
+all:  
+	$(MAKE) jpath
+	$(MAKE) fullset
+
+jpath: jpath/jpath.l.o jpath/jpath.y.o
+
+jpath/jpath.l.o jpath/jpath.y.o : 
 	cd jpath && $(MAKE) all
 
+fullset: json-tool libajt.so libajt.a
+
 clean:
-	-rm ajson.l.o ajson.y.o ajson.y.c ajson.l.c json-tool libajt.a libajt.so
 	cd jpath && $(MAKE) clean
+	-rm ajson.l.o ajson.y.o ajson.y.c ajson.l.c json-tool libajt.a libajt.so
 
 
 libajt.a	: ajson.l.o ajson.y.c

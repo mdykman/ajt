@@ -42,6 +42,7 @@ JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p);
+JsonNodeSet * __jpconcat(JsonNodeSet *ctx, JpathNode **p);
 
 //JsonNodeSet *jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
 
