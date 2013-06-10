@@ -62,12 +62,12 @@ extern const jax_callbacks single_callback ;
 %locations
 
 %token NULLVAL BADTOKEN EEOF
-%token<i> INTEGER 
+%token<i> INTEGER TOK_BOOL 
 %token<f> FLOAT
 %token<str> CHAR LABEL GARBAGE
 
 %type<str> chars sstr dstr string opref
-%type<i> item alistitem
+%type<i> item alistitem integer
 
 %%     
 
@@ -77,7 +77,7 @@ json : item endp {
    @$.last_column = @2.last_column == -1 ? @1.last_column : @2.last_column ;
    @$.last_line =  @2.last_line == -1 ? @1.last_line : @2.last_line ;
 		if($1 == -1) {
-		// tthe only item is an error
+		// the only item is an error
 			YYABORT;
 		}
 	}
@@ -87,31 +87,11 @@ json : item endp {
    @$.last_column = @5.last_column == -1 ? @4.last_column : @5.last_column ;
    @$.last_line =  @5.last_line == -1 ? @4.last_line : @5.last_line ;
 		if($3 == -1) {
-		// tthe only item is an error
-			YYABORT;
-		}
-	}
-	/*
-   | jsonp {
-	@$.first_column = @1.first_column;
-   @$.first_line = @1.first_line;
-   @$.last_column = @1.last_column;
-   @$.last_line = @1.last_line;
-	}
-
-jsonp 
-	: LABEL '(' alistitem ')' endp EEOF {
-	@$.first_column = @1.first_column;
-   @$.first_line = @1.first_line;
-   @$.last_column = @5.last_column == -1 ? @4.last_column : @5.last_column ;
-   @$.last_line =  @5.last_line == -1 ? @4.last_line : @5.last_line ;
-		if($3 == -1) {
-		// tthe only item is an error
+		// the only item is an error
 			YYABORT;
 		}
 	}
 
-	*/
 endp : ';' {
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
@@ -146,10 +126,10 @@ item
    @$.last_column = @1.last_column;
    @$.last_line = @1.last_line;
 		$$ = 1;
-  		if(jax_default_callbacks.string) jax_default_callbacks.string("(null)");
+  		if(jax_default_callbacks.string) jax_default_callbacks.string(NULL);
 		if(jax_default_callbacks.scalar) jax_default_callbacks.scalar(NULL,0,NAN);
   }
-  | INTEGER {
+  | integer {
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -209,6 +189,16 @@ item
 			yywarning(buff);
 		}
   }
+
+
+integer : INTEGER { 
+//printf("INTEGER %ld\n",$1);
+		$$ = $1; 
+	}
+	| TOK_BOOL { 
+//printf("BOOL %ld\n",$1);
+		$$ = $1; 
+	}
 
 func : funcstart funcend  {
 		if(!jsonParserAllowJTL) {
@@ -276,10 +266,6 @@ oitem : opref alistitem  {
    @$.last_line = @2.last_line;
 	}
 
-	/*
-	| opref func
-	*/
-
 opref : LABEL ':' { 
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
@@ -296,7 +282,7 @@ opref : LABEL ':' {
 		if(jax_default_callbacks.key) jax_default_callbacks.key($1);
 		JSONFREE($1);
 	}
-	| INTEGER ':' { 
+	| integer ':' { 
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;

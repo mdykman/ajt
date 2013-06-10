@@ -1,5 +1,7 @@
 %{
 
+#include<math.h>
+
 #include "ajt.h"
 #include "ajson.y.h"
 
@@ -81,6 +83,9 @@ int yycolumn = 1;
 
 
 [-+]?[0-9]+[.][0-9]+(e[-+]?[0-9]+)? { 
+		char**end = NULL;
+		double dd = strtof(yytext,end);
+		jsonlval.f = (*end == yytext) ? NAN : dd;
 		return FLOAT; 
 	}
 
@@ -90,6 +95,16 @@ int yycolumn = 1;
 	}
 
 null { return NULLVAL; }
+
+true		{ 
+		jsonlval.i = 1; 
+		return TOK_BOOL;
+	}
+
+false		{ 
+		jsonlval.i = 0; 
+		return TOK_BOOL;
+	}
 
 [$a-zA-Z_][$a-zA-Z0-9_-]+ { 
 		jsonlval.str = strdup(yytext);
@@ -114,7 +129,7 @@ null { return NULLVAL; }
 
 [ \t]+ {  }
 
-<<EOF>> { return EEOF; }
+     /* <<EOF>> { return EEOF; } */
 
 .   { 
 		  

@@ -1,4 +1,5 @@
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -72,7 +73,11 @@ int minstr(const char*p) {
 	if(!first) {
 		fprintf(jsoutput,",");
 	}
-	fprintf(jsoutput,"\"%s\"",p);
+	if(p == NULL) {
+		fprintf(jsoutput,"null");
+	} else {
+		fprintf(jsoutput,"\"%s\"",p);
+	}
 	first=0;
 }
 int minnum(long ival, double fval) {
@@ -176,7 +181,11 @@ int ppstr(const char*p) {
 	if(!first) {
 		fprintf(jsoutput,", ");
 	}
-	fprintf(jsoutput,"\"%s\"",p);
+	if(p == NULL) {
+		fprintf(jsoutput,"null");
+	} else {
+		fprintf(jsoutput,"\"%s\"",p);
+	}
 	first=0;
 }
 int ppnum(long ival, double fval) {
@@ -264,7 +273,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "\t-q        quiet, produce no output (syntax check only)\n");
             fprintf(stderr, "\t-d        enable verbose debugging to stderr\n");
             fprintf(stderr, "\t-t        tolerate errors (tidy - experimental)\n");
-            fprintf(stderr, "\t-j        trasnform via JTL\n");
+            fprintf(stderr, "\t-j        transform via JTL (under development)\n");
             exit(1);
         }
     }
