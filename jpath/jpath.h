@@ -34,6 +34,7 @@ typedef JsonNodeSet* (*jpathproc)(JsonNodeSet*context,struct __JpathNode **array
 
 #define JPATHFUNC(nm,p,n,a) newJpathNode((p),(nm),NULL,NULL,(n),(a),NULL)
 #define JPATHFUNCDATA(nm,p,d) newJpathNode((p),(nm),NULL,(d),0,0,NULL)
+
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data, int nargs, int ag, JpathNode *next) ;
 int parseJpath(const char *s);
 

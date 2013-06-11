@@ -192,13 +192,13 @@ fstep
 
 const
 	: string { 
-		 $$ = JPATHFUNC("string",__jpevalstr,jsonCreateString($1)); 
+		 $$ = JPATHFUNCDATA("string",__jpevaldata,jsonCreateString(NULL,$1)); 
 	}
 	| INTEGER{ 
-		 $$ = JPATHFUNC("integer",__jpnoop,-1,1); 
+		 $$ = JPATHFUNCDATA("integer",__jpevaldata,jsonCreateNumber(NULL,$1,$1)); 
 	}
 	| FLOAT{ 
-		 $$ = JPATHFUNC("float",__jpnoop,-1,1); 
+		 $$ = JPATHFUNCDATA("float",__jpevaldata,jsonCreateNumber(NULL,$1,$1)); 
 	}
 
 
@@ -425,14 +425,23 @@ JsonNodeSet * newJsonNodeSet() {
 	return result;
 }
 
+JsonNodeSet *__jpident(JsonNodeSet *ctx,JpathNode **jn) {
+	return ctx;
+}
 JsonNodeSet *__jpnoop(JsonNodeSet *ctx,JpathNode **jn) {
 	return ctx;
 }
 
-JsonNodeSet * __jpevaldata(JsonNodeSet *ctx, JpathNode **p) {
+JsonNodeSet * __jpevaldata(JsonNodeSet *ctx, JpathNode **jn) {
 	JSONTESTPARAMS(jn,1);
+	JsonNodeSet *rjns = newJsonNodeSet();
 	JpathNode *p = jsonGetJpathParam(jn,0);
-	JsonNode *d = p->data;
+	int i=0;
+	for(;i<ctx->count;++i) {
+		addJsonNode(rjns,jsonCloneNode(p->data));
+		JsonNode*test=jpathExecute(ctx->nodes[i],p);
+	}
+	return rjns;
 }
 
 JsonNodeSet *__jpif(JsonNodeSet *ctx,JpathNode **jn) {
@@ -562,8 +571,8 @@ JsonNodeSet * __jpcount(JsonNodeSet *ctx, JpathNode **p) {
 	// check if all input nodes share the same parent
 	int i;
 	for(i=0;i<ctx->count;++i) {
-		JsonNode*p = jsonGetParent(ctx->nodes[i]);
-		parent = parent == p ? parent : NULL;
+		JsonNode*pp = jsonGetParent(ctx->nodes[i]);
+		parent = parent == pp ? parent : NULL;
 	}
 	addJsonNode(rs,jsonCreateNumber(parent,ctx->count,ctx->count));
 	return rs;
@@ -626,27 +635,13 @@ JsonNodeSet * __jplimit(JsonNodeSet *ctx, JpathNode **p,double(*choose)(double,d
 	return ns;
 }
 
-double mostof(double a, double b) {
-	return a > b ? a : b;
-}
+double mostof(double a, double b) { return a > b ? a : b; }
+double sumof(double a, double b) { return a + b; }
+double leastof(double a, double b) { return a < b ? a : b; }
 
-double sumof(double a, double b) {
-	return a + b;
-}
-double leastof(double a, double b) {
-	return a < b ? a : b;
-}
-JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p) {
-	return __jplimit(ctx,p,leastof,0);
-}
-
-JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p) {
-	return __jplimit(ctx,p,mostof,0);
-}
-
-JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p) {
-	return __jplimit(ctx,p,sumof,1);
-}
+JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p) { return __jplimit(ctx,p,leastof,0); }
+JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p) { return __jplimit(ctx,p,mostof,0); }
+JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode **p) { return __jplimit(ctx,p,sumof,1); }
 
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data,int nargs, int ag, JpathNode *next) {
 	JpathNode* jp = JPATHALLOC(sizeof(JpathNode));
