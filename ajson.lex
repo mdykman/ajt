@@ -129,7 +129,7 @@ false		{
 
 [ \t]+ {  }
 
-     /* <<EOF>> { return EEOF; } */
+	/* <<EOF>> { return EEOF; } */
 
 .   { 
 		  

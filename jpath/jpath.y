@@ -67,6 +67,7 @@ int jpathcolumn = 0;
 
 %type<str> chars dstr sstr string
 %type<jp> builtin arithop miscop agop strop 
+%type<jp> fstep bstep step
 
 %type<jp> const
 
@@ -161,9 +162,11 @@ ttop
 
 pexp
 	: const
-	| fcall
 	| '(' jpath ')'
 	| var
+	| fcall  { 
+		/* only valid in jtl*/
+		}
 
 fcall 
 	: func '(' plist ')'
@@ -177,17 +180,17 @@ plist
 	: jpath
 	| plist ',' jpath
 
-step: fstep 
-	| bstep
-	| '.'
+step: fstep { $$ = $1; }
+	| bstep { $$ = $1; }
+	| '.' { $$ = JPATHFUNC("self",__jpnoop,-1,1); }
 
 bstep
-	: DDOT  
-	| TDOT
+	: DDOT { $$ = JPATHFUNC("parent",__jpparent,-1,1); } 
+	| TDOT{ $$ = JPATHFUNC("peach",__jppeach,-1,1); }
 
 fstep
-	: '*' 
-	| DSTAR
+	: '*' { $$ = JPATHFUNC("star",__jpeach,-1,1); }
+	| DSTAR { $$ = JPATHFUNC("dstar",__jpeachdeep,-1,1); }
 
 
 const
@@ -229,6 +232,7 @@ dex
 	: '[' rangexp ']'
 
 rangexp : jpath DDOT jpath 
+	| jpath DDOT
 	| plist
 
 builtin
@@ -323,6 +327,11 @@ void freeJsonNodeSet(JsonNodeSet *js) {
 }
 
 void addJsonNode(JsonNodeSet*jns,JsonNode*node) {
+	// ignore duplicates
+	int i;
+	for(i=0;i<jns->count;++i) {
+		if(jns->nodes[i] == node) return;
+	}
 	if(jns->count+1 >= jns->capacity) {
 		jns->capacity*=2;
 		jns->nodes = (JsonNode**)JPATHREALLOC(jns->nodes,jns->capacity*sizeof(JsonNode*));
@@ -423,6 +432,106 @@ JsonNodeSet * newJsonNodeSet() {
 	result->capacity = JSONNODESETINIT;
 	result->count = 0;
 	return result;
+}
+
+JsonNodeSet* json2NodeSet(JsonNode *n) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	JsonNode*p;
+	if(n->type == TYPE_ARRAY) {
+		p = n->first;
+		while(p != NULL) {
+			addJsonNode(rjns,jsonCloneNode(p));
+			p = p->next;
+		}
+	}
+	else if(n->type == TYPE_OBJECT) {
+		p = n->first;
+		while(p != NULL) {
+			addJsonNode(rjns,jsonCloneNode(p->first));
+			p = p->next;
+		}
+	} else {
+			addJsonNode(rjns,jsonCloneNode(n));
+	}
+
+	return rjns;
+}
+
+JsonNodeSet *__jppeach(JsonNodeSet *ctx,JpathNode **jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<ctx->count;++i) {
+		JsonNode *pp = ctx->nodes[i]->parent;
+		while(pp != NULL) {
+			addJsonNode(rjns,pp);
+			pp = pp->parent;
+		}
+	}
+	return rjns;
+}
+
+JsonNodeSet *__jpparent(JsonNodeSet *ctx,JpathNode **jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<ctx->count;++i) {
+		JsonNode *pp = ctx->nodes[i]->parent;
+		if(pp != NULL) addJsonNode(rjns,pp);
+	}
+	return rjns;
+}
+
+JsonNodeSet *__jpeachrecurse(JsonNodeSet *result,JsonNode *ctx) {
+	addJsonNode(result,jsonCloneNode(ctx));
+
+	if(ctx->type == TYPE_ARRAY) {
+		int i=0;
+		JsonNode *eech = ctx->first;
+		while(eech != NULL) {
+			__jpeachrecurse(result,eech);
+			eech = eech->next;
+		}
+	} else if (ctx->type == TYPE_OBJECT) {
+		int i=0;
+		JsonNode *eech = ctx->first;
+		while(eech != NULL) {
+			__jpeachrecurse(result,eech->first);
+			eech = eech->next;
+		}
+	} 
+	return result;
+}
+
+JsonNodeSet *__jpeachdeep(JsonNodeSet *ctx,JpathNode **jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<ctx->count;++i) {
+		__jpeachrecurse(rjns,ctx->nodes[i]);	
+	}
+	return  rjns;
+}
+
+JsonNodeSet *__jpeach(JsonNodeSet *ctx,JpathNode **jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<ctx->count;++i) {
+		JsonNode*n = ctx->nodes[i];
+		if(n->type == TYPE_ARRAY) {
+			JsonNode *eech = n->first;
+			while(eech != NULL) {
+				addJsonNode(rjns,jsonCloneNode(eech));
+				eech = eech->next;
+			}
+		} else if (n->type == TYPE_OBJECT) {
+			JsonNode *eech = n->first;
+			while(eech != NULL) {
+				addJsonNode(rjns,jsonCloneNode(eech->first));
+				eech = eech->next;
+			}
+		} else {
+			addJsonNode(rjns,jsonCloneNode(n));
+		}
+	}
+	return rjns;
 }
 
 JsonNodeSet *__jpident(JsonNodeSet *ctx,JpathNode **jn) {

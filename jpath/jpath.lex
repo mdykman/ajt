@@ -138,5 +138,9 @@ lte { return LTES; }
 	yyterminate();
 }
 
+[\n] { 
+   //	I should never see one of these
+}
+
 %%
 

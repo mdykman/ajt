@@ -51,7 +51,7 @@ extern const jax_callbacks single_callback ;
 #define YYERROR_VERBOSE 1
 %}
 
-%start json
+%start jsonp
 
 %union { 
 	char*str;
@@ -67,26 +67,28 @@ extern const jax_callbacks single_callback ;
 %token<str> CHAR LABEL GARBAGE
 
 %type<str> chars sstr dstr string opref
-%type<i> item alistitem integer
+%type<i> item alistitem integer json
 
 %%     
 
-json : item endp {
+jsonp : LABEL '(' json ')' endp { /* jsonp */
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
-   @$.last_column = @2.last_column == -1 ? @1.last_column : @2.last_column ;
-   @$.last_line =  @2.last_line == -1 ? @1.last_line : @2.last_line ;
-		if($1 == -1) {
+   @$.last_column = @4.last_column ;
+   @$.last_line = @4.last_line ;
+		if($3 == -1) {
 		// the only item is an error
 			YYABORT;
 		}
 	}
-	| LABEL '(' alistitem ')' endp { /* jsonp */
+	| json endp
+
+json : item {
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
-   @$.last_column = @5.last_column == -1 ? @4.last_column : @5.last_column ;
-   @$.last_line =  @5.last_line == -1 ? @4.last_line : @5.last_line ;
-		if($3 == -1) {
+   @$.last_column = @1.last_column;
+   @$.last_line = @1.last_line;
+		if($1 == -1) {
 		// the only item is an error
 			YYABORT;
 		}
@@ -99,10 +101,10 @@ endp : ';' {
    @$.last_line = @1.last_line;
 	}
    | {
-	@$.first_column = -1;
-   @$.first_line = -1;
-   @$.last_column = -1;
-   @$.last_line = -1;
+//	@$.first_column = -1;
+//   @$.first_line = -1;
+//   @$.last_column = -1;
+//   @$.last_line = -1;
 	}
 
 item 
@@ -477,7 +479,15 @@ int yywarning(const char *p) {
 		p);
 }
 int yyerror(const char *p) {
-	return fprintf(stderr,"error between line %d, pos %d and line %d, pos %d: %s\n",
+	if(LOCATION.first_line == LOCATION.last_line) {
+		if(LOCATION.first_column == LOCATION.last_column) {
+			return fprintf(stderr,"error on line %d, column %d: %s\n",LOCATION.first_line,LOCATION.first_column,p);
+		} else {
+			return fprintf(stderr,"error on line %d between %d and %d: %s\n",LOCATION.first_line,
+				LOCATION.first_column,LOCATION.last_column,p);
+		}
+	} else 
+	return fprintf(stderr,"error between line %d col %d and line %d col %d: %s\n",
 		LOCATION.first_line,
 		LOCATION.first_column,
 		LOCATION.last_line,

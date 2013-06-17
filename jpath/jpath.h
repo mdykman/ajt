@@ -40,6 +40,10 @@ int parseJpath(const char *s);
 
 JsonNodeSet * __jpnoop(JsonNodeSet *ctx, JpathNode **p) ;
 JsonNodeSet * __jpevaldata(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpparent(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jppeach(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpeach(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpeachdeep(JsonNodeSet *ctx, JpathNode **p) ;
 
 JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) ;
 JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p);
