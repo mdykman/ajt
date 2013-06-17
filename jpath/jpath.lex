@@ -93,7 +93,7 @@ sin { return SIN; }
 cos { return COS; }
 log { return LOG; }
 floor { return FLOOR; }
-ciel { return CIEL; }
+ciel { return CEIL; }
 round { return ROUND; }
 rand { return RAND; }
 

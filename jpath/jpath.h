@@ -45,6 +45,15 @@ JsonNodeSet * __jppeach(JsonNodeSet *ctx, JpathNode **p) ;
 JsonNodeSet * __jpeach(JsonNodeSet *ctx, JpathNode **p) ;
 JsonNodeSet * __jpeachdeep(JsonNodeSet *ctx, JpathNode **p) ;
 
+JsonNodeSet * __jpceil(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpfloor(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jprand(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpsqrt(JsonNodeSet *ctx, JpathNode **p) ;
+JsonNodeSet * __jpround(JsonNodeSet *ctx, JpathNode **p) ;
+
+
+
+
 JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) ;
 JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode **p);
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode **p);

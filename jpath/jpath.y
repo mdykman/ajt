@@ -76,7 +76,7 @@ int jpathcolumn = 0;
 %token<ival> INTEGER
 
 %token<jp> DDOT TDOT DSTAR 
-%token<jp> LTE GTE NE SQRT POW FLOOR CIEL ROUND RAND DIV
+%token<jp> LTE GTE NE SQRT POW FLOOR CEIL ROUND RAND DIV
 %token<jp> NUMBER TEXT SCALAR ARRAY OBJECT NULLV NAME
 %token<jp> GROUP IF SORT UNIQ QKEY VALUE AVG MIN MAX SIZE SUM
 %token<jp> SIN COS LOG
@@ -242,12 +242,12 @@ builtin
 	| arithop { $$ = $1; }
 
 arithop
-	: SQRT { $$ = JPATHFUNC("sqrt",__jpnoop,-1,1); }
+	: SQRT { $$ = JPATHFUNC("sqrt",__jpsqrt,-1,1); }
 	| POW { $$ = JPATHFUNC("pow",__jpnoop,-1,1); }
-	| FLOOR { $$ = JPATHFUNC("floor",__jpnoop,-1,1); }
-	| CIEL { $$ = JPATHFUNC("ciel",__jpnoop,-1,1); }
+	| FLOOR { $$ = JPATHFUNC("floor",__jpfloor,-1,1); }
+	| CEIL { $$ = JPATHFUNC("ciel",__jpceil,-1,1); }
 	| ROUND { $$ = JPATHFUNC("round",__jpnoop,-1,1); }
-	| RAND { $$ = JPATHFUNC("rand",__jpnoop,-1,1); }
+	| RAND { $$ = JPATHFUNC("rand",__jprand,-1,1); }
 
 
 miscop
