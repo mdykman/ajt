@@ -380,7 +380,7 @@ JpathNode* jsonGetJpathParam(JpathNode**ptr,int x)  {
 	
 
 
-#define JSONSTARTCONTEXT(x)   	\
+#define JSONSTARTCONTEXT(x,p)   	\
 	{ \
 	JsonNodeSet *_ctx = tempContext((x),p);	\
 	if(_ctx != NULL) {			\
@@ -456,6 +456,75 @@ JsonNodeSet* json2NodeSet(JsonNode *n) {
 
 	return rjns;
 }
+
+JsonNodeSet *__numeric(JsonNodeSet *ctx,JpathNode **jn,double (*dfunc)(double)) {
+	JSONSTARTCONTEXT(ctx,jn)
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<ctx->count;++i) {
+		JsonNode *n = ctx->nodes[i];
+		if(n->type == TYPE_NUMBER) {
+			double res = dfunc(n->fval);
+			if(res == NAN) {
+				addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+			} else {
+				addJsonNode(rjns,jsonCreateNumber(NULL,(long)res,res));
+			}
+		} else if(n->type == TYPE_STRING) {
+			if(n->str == NULL) {
+				addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+			} else {
+				char*endp;
+				double dd = strtol(n->str,&endp,10);
+				if(endp == n->str) {
+					addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+				} else {
+					double res = dfunc(dd);
+					if(res == NAN) {
+						addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+					} else {
+						addJsonNode(rjns,jsonCreateNumber(NULL,(long)res,res));
+					}
+				}
+			}
+		} else {
+			addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+		}
+	}
+	return rjns;
+}
+
+JsonNodeSet *__jpround(JsonNodeSet *ctx,JpathNode **jn) {
+	return __numeric(ctx,jn,round);	
+}
+
+JsonNodeSet *__jpceil(JsonNodeSet *ctx,JpathNode **jn) {
+	return __numeric(ctx,jn,ceil);	
+}
+
+JsonNodeSet *__jpfloor(JsonNodeSet *ctx,JpathNode **jn) {
+	return __numeric(ctx,jn,floor);	
+}
+
+JsonNodeSet *__jpsqrt(JsonNodeSet *ctx,JpathNode **jn) {
+	return __numeric(ctx,jn,sqrt);	
+}
+
+double jrand(double d) {
+	unsigned int max = RAND_MAX;
+	double res = rand_r(&max);
+	res /= RAND_MAX;
+	if(d != 0) {
+		res *= d;
+	}
+
+	return res;
+}
+
+JsonNodeSet *__jprand(JsonNodeSet *ctx,JpathNode **jn) {
+	return __numeric(ctx,jn,jrand);	
+}
+
 
 JsonNodeSet *__jppeach(JsonNodeSet *ctx,JpathNode **jn) {
 	JsonNodeSet *rjns = newJsonNodeSet();
@@ -660,7 +729,7 @@ JsonNodeSet *__jpconcat(JsonNodeSet *ctx,JpathNode **jn) {
 }
 
 JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) {
-	JSONSTARTCONTEXT(ctx)
+	JSONSTARTCONTEXT(ctx,p)
 	if(ctx->count == 0) { return ctx; }
 
 	int cnt = ctx->count;
@@ -673,7 +742,7 @@ JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode **p) {
 }
 
 JsonNodeSet * __jpcount(JsonNodeSet *ctx, JpathNode **p) {
-	JSONSTARTCONTEXT(ctx)
+	JSONSTARTCONTEXT(ctx,p)
 	if(ctx->count == 0) { return ctx; }
 	JsonNodeSet * rs = newJsonNodeSet();
 	JsonNode *parent = jsonGetParent(ctx->nodes[0]);
@@ -688,7 +757,7 @@ JsonNodeSet * __jpcount(JsonNodeSet *ctx, JpathNode **p) {
 }
 
 JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p) {
-	JSONSTARTCONTEXT(ctx)
+	JSONSTARTCONTEXT(ctx,p)
 	if(ctx->count == 0) { return ctx; }
 	int i;
 	for(i=0;i<ctx->count;++i) {
@@ -698,7 +767,7 @@ JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode **p) {
 }
 
 JsonNodeSet * __jplimit(JsonNodeSet *ctx, JpathNode **p,double(*choose)(double,double),int acc) {
-	JSONSTARTCONTEXT(ctx)
+	JSONSTARTCONTEXT(ctx,p)
 	if(ctx->count == 0) { return ctx; }
 	JsonNodeSet * ns = newJsonNodeSet();
 	JsonNode *parent = ctx->nodes[0]->parent;

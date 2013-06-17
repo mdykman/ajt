@@ -6,7 +6,7 @@
 #include "ajson.y.h"
 
 void pEsc(char**target,const char* text);
-int yycolumn = 1;
+int yycolumn = 0;
 #define YY_USER_ACTION jsonlloc.first_line = jsonlloc.last_line = yylineno; \
     jsonlloc.first_column = yycolumn; jsonlloc.last_column = yycolumn+yyleng-1; \
 	     yycolumn += yyleng;
@@ -114,18 +114,18 @@ false		{
     /* ignore line comments */
 [/][/].*$    {  }
 
-[,]		{ ++yycolumn; return ','; }
-[:]		{  ++yycolumn; return ':'; }
-[[]		{  ++yycolumn; return '['; }
-[\]]		{  ++yycolumn; return ']'; }
-[(]		{  ++yycolumn; return '('; }
-[)]		{  ++yycolumn; return ')'; }
-[{]		{  ++yycolumn; return '{'; }
-[}]		{  ++yycolumn; return '}'; }
+[,]		{  return ','; }
+[:]		{  return ':'; }
+[[]		{  return '['; }
+[\]]		{  return ']'; }
+[(]		{  return '('; }
+[)]		{  return ')'; }
+[{]		{  return '{'; }
+[}]		{  return '}'; }
 
 
 
-([\r][\n])|[\r]|[\n]  {   yycolumn = 1; }
+([\r][\n])|[\r]|[\n]  {   yycolumn = 0; }
 
 [ \t]+ {  }
 
