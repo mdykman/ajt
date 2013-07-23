@@ -24,6 +24,8 @@ typedef enum {
 JSONSTACKTYPES JSONTYPESTACK[4096]  = { JSONSTART };
 
 
+JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) ;
+
 int JSONSTACKP = 0;
 
 int minso() {
@@ -279,6 +281,7 @@ int main(int argc, char *argv[])
     }
 
 	FILE * myinput = NULL;
+	// alternate input file
 	if(optind <  argc) {
 		myinput = fopen(argv[optind],"r");
 		if(myinput == NULL) {
@@ -286,7 +289,7 @@ int main(int argc, char *argv[])
 			exit(2);
 		}
 	}
-	
+	// alternate output file
 	if(filename != NULL) {
 		jsoutput = fopen(filename,"w");
 		if(jsoutput == NULL) {
@@ -294,31 +297,31 @@ int main(int argc, char *argv[])
 			exit(3);
 		}
 	}
+
+	JsonNode * tree = jsonBuildJsonTreeFromFile(myinput == NULL ? stdin : myinput);
+
 	if(jtlfile != NULL) {
 		FILE *jtf = fopen(jtlfile,"r");
 		JsonNode * jtltree = jsonBuildJtlTreeFromFile(jtf);
 		fclose(jtf);
-		JsonNode * tree = jsonBuildJsonTreeFromFile(myinput);
-		exit(jtlTransform(jtltree,tree));
-		
+		tree = jtlTransform(jtltree,tree);
 	}
-	if(testbuilder) {
-		exit(testBuilder(myinput));
-		
-//		JsonNode * tree = jsonBuildTreeFromFile(myinput);
-	} else if(prettyprint) {
+
+	if(prettyprint) {
+		jsonPrintToFile(jsoutput,tree,JSONPRINT_PRETTY);
 //	printf("line %d\n",__LINE__);
-		setCallBacks(ppfcb);
+//		setCallBacks(ppfcb);
 	} else if(minify) {
+		jsonPrintToFile(jsoutput,tree,JSONPRINT_MINIFY);
 //	printf("line %d\n",__LINE__);
-		setCallBacks(minifcb);
+//.		setCallBacks(minifcb);
 	} else if(quiet)  {
 //	printf("line %d\n",__LINE__);
-		setCallBacks(noopfcb);
+//		setCallBacks(noopfcb);
 	}
 
 //	printf("line %d\n",__LINE__);
-	int result = parseJsonFile(myinput == NULL ? stdin : myinput,0);
+//	int result = parseJsonFile(myinput == NULL ? stdin : myinput,0);
 //   int result =  jsonparse();
 	if(filename != NULL) {
 		fclose(jsoutput);
@@ -326,7 +329,7 @@ int main(int argc, char *argv[])
 	if(myinput!=NULL) {
 		fclose(myinput);
 	}
-	return result;
+	return 0;
 }
 
 void jsonShowTree(FILE* out,JsonNode*js,int indent) {
@@ -343,25 +346,8 @@ void jsonShowTree(FILE* out,JsonNode*js,int indent) {
 	}
 }
 
-int jtlTransform(JsonNode*jtl,JsonNode *json) {
-	if(jtl == NULL) {
-		return 2;
-	}
-
-	if(json == NULL) {
-		return 1;
-	}
-	JsonNode *def = jsonGetMember(jtl,"default");
-	if(def == NULL) {
-		def = jtl;
-	}
-
-	printf("       ---------- JTL  ------------\n\n\n");
-	jsonShowTree(stdout,jtl,0);
-	printf("       ---------- JSON ------------\n\n\n");
-	jsonShowTree(stdout,json,0);
-
-	return 0;
+JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
+	return jtl;
 }
 
 int testBuilder(FILE *f) {

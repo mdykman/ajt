@@ -66,6 +66,15 @@ JsonNodeSet * __jpeq			(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpneq		(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpnot		(JsonNodeSet *ctx, JpathNode *p);
 
+JsonNodeSet*__jpif(JsonNodeSet *ctx,JpathNode *jn);
+
+JsonNodeSet*__jpadd(JsonNodeSet *ctx,JpathNode *jn);
+JsonNodeSet*__jpsub(JsonNodeSet *ctx,JpathNode *jn);
+JsonNodeSet*__jpmul(JsonNodeSet *ctx,JpathNode *jn);
+JsonNodeSet*__jpdiv(JsonNodeSet *ctx,JpathNode *jn);
+JsonNodeSet*__jpmod(JsonNodeSet *ctx,JpathNode *jn);
+JsonNodeSet*__jppow(JsonNodeSet *ctx,JpathNode *jn);
+
 JsonNodeSet * __jptexttest		(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpnumbertest	(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpscalartest	(JsonNodeSet *ctx, JpathNode *p);
@@ -77,7 +86,7 @@ JsonNodeSet * __jpnametest	(JsonNodeSet *ctx, JpathNode *p);
 
 JsonNodeSet * __jpudf(JsonNodeSet *ctx, JpathNode *p);
 
-JsonNodeSet*__jpcompare	(JsonNodeSet *ctx,JpathNode **jn,int(cmpop)(int)) ;
+JsonNodeSet*__jpcompare	(JsonNodeSet *ctx,JpathNode *jn,int(cmpop)(int)) ;
 
 JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
 JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;

@@ -11,7 +11,7 @@ GENERATED_FILES=	\
 	ajson.l.c \
 	ajson.y.h \
 	ajson.l.h \
-	json-main.o \
+	ajt.o \
 	json-tool 
 	
 all:  
@@ -35,8 +35,8 @@ libajt.a	: ajson.l.o ajson.y.c
 libajt.so	: ajson.l.o ajson.y.c
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
 
-json-tool : ajson.y.o ajson.l.o json-main.o
-	${CC} -lm ajson.y.o ajson.l.o json-main.o -o json-tool
+json-tool : ajson.y.o ajson.l.o ajt.o
+	${CC} -lm ajson.y.o ajson.l.o ajt.o -o json-tool
 
 ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex
 	flex  --header-file=ajson.l.h --prefix ${BISONPREFIX} -o ajson.l.c ajson.lex

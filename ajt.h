@@ -4,6 +4,7 @@
 #include<stdio.h>
 
 
+#define DEFAULT_FLOAT_FORMAT "%.6f"
 
 typedef struct __jax_callbacks {
 	int (*startobject)();
@@ -46,6 +47,11 @@ typedef const enum {
 } __JAXEVT;
 
 
+
+#define JSONPRINT_MINIFY  0
+#define JSONPRINT_PRETTY  1
+#define JSONPRINT_SQUOTE  2
+#define JSONPRINT_TABFILL 4
 
 typedef enum  {
 	TYPE_JSONP,
@@ -99,6 +105,7 @@ extern jax_callbacks __jax_default_callbacks;
   extern JsonNode* jsonCreateNumber(JsonNode*p,long ival, double fval) ;
   extern JsonNode* jsonCreateObject(JsonNode*p) ;
   extern JsonNode* jsonCreateArray(JsonNode*p) ;
+  extern JsonNode* jsonCreateNull(JsonNode*p) ;
   extern JsonNode* jsonGetParent(JsonNode*p) ;
 
   extern int jsonObjectAppend(JsonNode *object,const char*key,JsonNode *ch) ;
@@ -118,6 +125,9 @@ extern JsonNode* jsonGetMember(JsonNode* obj,const char *name);
 
 extern JsonNode* jsonBuildJtlTreeFromString(const char *s) ;
 extern JsonNode* jsonBuildJtlTreeFromFile(FILE *f) ;
+
+
+extern int jsonPrintToFile(FILE *f,JsonNode *node,int options);
 
 extern void jsonFree(JsonNode*js) ;
 
