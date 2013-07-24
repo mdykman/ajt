@@ -301,6 +301,7 @@ int main(int argc, char *argv[])
 	JsonNode * tree = jsonBuildJsonTreeFromFile(myinput == NULL ? stdin : myinput);
 
 	if(jtlfile != NULL) {
+		fprintf(stderr,"transform\n");
 		FILE *jtf = fopen(jtlfile,"r");
 		JsonNode * jtltree = jsonBuildJtlTreeFromFile(jtf);
 		fclose(jtf);
@@ -308,14 +309,17 @@ int main(int argc, char *argv[])
 	}
 
 	if(prettyprint) {
+		fprintf(stderr,"pretty\n");
 		jsonPrintToFile(jsoutput,tree,JSONPRINT_PRETTY);
 //	printf("line %d\n",__LINE__);
 //		setCallBacks(ppfcb);
 	} else if(minify) {
+		fprintf(stderr,"min\n");
 		jsonPrintToFile(jsoutput,tree,JSONPRINT_MINIFY);
 //	printf("line %d\n",__LINE__);
 //.		setCallBacks(minifcb);
 	} else if(quiet)  {
+		fprintf(stderr,"nothing\n");
 //	printf("line %d\n",__LINE__);
 //		setCallBacks(noopfcb);
 	}

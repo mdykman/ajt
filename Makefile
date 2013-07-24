@@ -12,7 +12,7 @@ GENERATED_FILES=	\
 	ajson.y.h \
 	ajson.l.h \
 	ajt.o \
-	json-tool 
+	ajt 
 	
 all:  
 	$(MAKE) jpath
@@ -23,7 +23,7 @@ jpath: jpath/jpath.l.o jpath/jpath.y.o
 jpath/jpath.l.o jpath/jpath.y.o : 
 	cd jpath && $(MAKE) all
 
-fullset: json-tool 
+fullset: ajt 
 
 clean:
 	cd jpath && $(MAKE) clean
@@ -35,8 +35,8 @@ libajt.a	: ajson.l.o ajson.y.c
 libajt.so	: ajson.l.o ajson.y.c
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
 
-json-tool : ajson.y.o ajson.l.o ajt.o
-	${CC} -lm ajson.y.o ajson.l.o ajt.o -o json-tool
+ajt : ajson.y.o ajson.l.o ajt.o
+	${CC} -lm ajson.y.o ajson.l.o ajt.o -o ajt
 
 ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex
 	flex  --header-file=ajson.l.h --prefix ${BISONPREFIX} -o ajson.l.c ajson.lex

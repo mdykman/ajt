@@ -1031,82 +1031,135 @@ int jsonPrintString(FILE*f,const char*str,int sq) {
 	return oc;
 }
 
-int __jsonPrintToFile(FILE *f,JsonNode *node,int options,int depth)	{
-	int oc = 0;
+int __jsonPrintJsonp(FILE *f,JsonNode *node,int options, int depth) {
+	int pretty = options & JSONPRINT_PRETTY ? 1 : 0;
+	int oc=fprintf(f,"%s(",node->str);
+	oc+=__jsonPrintToFile(f,node->first,options,depth+1);
+	oc+=fprintf(f,")");
+	if(pretty) {
+		oc+=fprintf(f,"\n");
+	}
+	return oc;
+}
+
+int __jsonPrintObject(FILE *f,JsonNode *node,int options, int depth) {
 	int pretty = options & JSONPRINT_PRETTY ? 1 : 0;
 	int tabfill = options & JSONPRINT_TABFILL ? 1 : 0;
 
-	if(node == NULL) return 0;
-	switch(node->type) {
-		case TYPE_JSONP:
-			oc+=fprintf(f,"%s(",node->str);
-			oc+=__jsonPrintToFile(f,node->first,options,depth+1);
-			oc+=fprintf(f,")");
-			if(pretty) {
+	int oc=fprintf(f,"{");
+	JsonNode *child = node->first;
+	int ff = 1;
+	while(child!=NULL) {
+		if(ff) ff = 0;
+		else {
+			oc+=fprintf(f,",");
+		}
+		if(pretty) {
+			oc+=fprintf(f,"\n");
+			oc+=JNINDENT(f,depth+1,tabfill);
+		}
+		oc+=__jsonPrintToFile(f,child,options,depth+1);
+		child=child->next;
+	}
+	oc+=fprintf(f,"\n");
+	oc+=JNINDENT(f,depth,tabfill);
+	oc+=fprintf(f,"}");
+	return oc;
+}
+
+int __jsonPrintArray(FILE *f,JsonNode *node,int options, int depth) {
+	int pretty = options & JSONPRINT_PRETTY ? 1 : 0;
+	int tabfill = options & JSONPRINT_TABFILL ? 1 : 0;
+
+	int oc=fprintf(f,"[");
+	JsonNode *child = node->first;
+	int ff = 1;
+	int lwa = 0;
+	while(child!=NULL) {
+		if(ff) {
+			ff = 0;
+			if(child->type == TYPE_ARRAY) {
+				lwa = 1;
 				oc+=fprintf(f,"\n");
+				oc+=JNINDENT(f,depth+1,tabfill);
 			}
+		} else {
+			oc+=fprintf(f,",");
+			if(child->type == TYPE_ARRAY) {
+				lwa = 1;
+				oc+=fprintf(f,"\n");
+				oc+=JNINDENT(f,depth+1,tabfill);
+			} else {
+//				lwa = 0;
+				lwa = child->type == TYPE_OBJECT ? 1 : 0;
+				if(pretty) fprintf(f," "); 
+			}
+		}
+		oc+=__jsonPrintToFile(f,child,options,depth+1);
+		child=child->next;
+	}
+	if(lwa) {
+		oc+=fprintf(f,"\n");
+		oc+=JNINDENT(f,depth,tabfill);
+	}
+	oc+=fprintf(f,"]");
+	return oc;
+}
+
+int __jsonPrintElement(FILE *f,JsonNode *node,int options, int depth) {
+	int pretty = options & JSONPRINT_PRETTY ? 1 : 0;
+	int oc=jsonPrintString(f,node->str,options & JSONPRINT_SQUOTE ? 1 : 0);
+	oc+=fprintf(f,":");
+	if(pretty) oc+=fprintf(f," ");
+	oc+=__jsonPrintToFile(f,node->first,options,depth);
+	return oc;
+}
+
+int __jsonPrintNumber(FILE *f,JsonNode *node,int options, int depth) {
+	int oc = 0;
+	if(node->ival == node->fval) {
+		oc+=fprintf(f,"%ld",node->ival);
+	} else {
+		oc+=fprintf(f,DEFAULT_FLOAT_FORMAT,node->fval);
+	}
+	return oc;
+}
+
+int __jsonPrintString(FILE *f,JsonNode *node,int options, int depth) {
+	return jsonPrintString(f,node->str,options & JSONPRINT_SQUOTE ? 1 : 0);
+}
+
+int __jsonPrintToFile(FILE *f,JsonNode *node,int options,int depth)	{
+	if(node == NULL) return 0;
+	int oc = 0;
+	switch(node->type)  {
+		case TYPE_JSONP:
+			oc += __jsonPrintJsonp(f,node,options,depth);
 		break;
-		case TYPE_OBJECT: {
-				oc+=fprintf(f,"{");
-				JsonNode *child = node->first;
-				int ff = 1;
-				while(child!=NULL) {
-					if(ff) ff = 0;
-					else {
-						oc+=fprintf(f,",");
-					}
-					if(pretty) {
-						fprintf(f,"\n");
-						JNINDENT(f,indent+1,tabfill);
-					}
-					oc+=__jsonPrintToFile(f,child,options,depth+1);
-					child=child->next;
-				}
-				oc+=fprintf(f,"}");
-			}
+		case TYPE_OBJECT: 
+			oc += __jsonPrintObject(f,node,options,depth);
 		break;
-		case TYPE_ARRAY: {
-				oc+=fprintf(f,"[");
-				JsonNode *child = node->first;
-				int ff = 1;
-				while(child!=NULL) {
-					if(ff) ff = 0;
-					else {
-						oc+=fprintf(f,",");
-					}
-					oc+=__jsonPrintToFile(f,child,options,depth+1);
-					child=child->next;
-				}
-				oc+=fprintf(f,"]");
-			}
+		case TYPE_ARRAY: 
+			oc += __jsonPrintArray(f,node,options,depth);
 		break;
-		case TYPE_ELEMENT: {
-				oc+=jsonPrintString(f,node->str,options & JSONPRINT_SQUOTE ? 1 : 0);
-				oc+=fprintf(f,":");
-				if(pretty) {
-					oc+=fprintf(f," ");
-				}
-				oc+=__jsonPrintToFile(f,node->first,options,depth);
-			}
+		case TYPE_ELEMENT: 
+			oc += __jsonPrintElement(f,node,options,depth);
 		break;
 		case TYPE_NUMBER:
-			if(node->ival == node->fval) {
-				oc+=fprintf(f,"%ld",node->ival);
-			} else {
-				oc+=fprintf(f,DEFAULT_FLOAT_FORMAT,node->fval);
-			}
+			oc += __jsonPrintNumber(f,node,options,depth);
 		break;
-		case TYPE_STRING: {
-				oc+=jsonPrintString(f,node->str,options & JSONPRINT_SQUOTE ? 1 : 0);
-			}
+		case TYPE_STRING:
+			oc += __jsonPrintString(f,node,options,depth);
 		break;
-		default: {
-			fprintf(stderr,"invalid json type in jsonPrintToFile: `%i'\n",node->type);
-		}
+		default: 
+		break;
 	}
 	return oc;
 }
 
 int jsonPrintToFile(FILE *f,JsonNode *node,int options)	{
-	return __jsonPrintToFile(f,node,options,0);
+	int pretty = options & JSONPRINT_PRETTY ? 1 : 0;
+	int oc = __jsonPrintToFile(f,node,options,0);
+	if(pretty) oc+=fprintf(f,"\n");
+	return oc;
 }
