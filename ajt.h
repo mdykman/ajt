@@ -6,6 +6,9 @@
 
 #define DEFAULT_FLOAT_FORMAT "%.6f"
 
+#define JSONALLOC(x) malloc(x)
+#define JSONFREE(x) free(x)
+
 typedef struct __jax_callbacks {
 	int (*startobject)();
 	int (*endobject)();
@@ -83,6 +86,9 @@ typedef struct __JsonNode {
 // extern jax_callbacks jcb;
 // extern const jax_callbacks single_callback;
 
+extern void freeJsonNode(JsonNode*jn);
+
+
 extern int  jsonParserAllowErrors;
 extern int  jsonParserAllowJTL;
  extern int (*sjcb)(__JAXEVT type, const char* p, long i, double f);
@@ -105,6 +111,7 @@ extern jax_callbacks __jax_default_callbacks;
   extern JsonNode* jsonCreateNumber(JsonNode*p,long ival, double fval) ;
   extern JsonNode* jsonCreateObject(JsonNode*p) ;
   extern JsonNode* jsonCreateArray(JsonNode*p) ;
+  extern JsonNode* jsonCreateElement(JsonNode*p,const char*str) ;
   extern JsonNode* jsonCreateNull(JsonNode*p) ;
   extern JsonNode* jsonGetParent(JsonNode*p) ;
 
