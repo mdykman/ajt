@@ -7,6 +7,8 @@
 #include "ajt.h"
 #include "ajson.l.h"
 
+#include "jpath/jpath.h"
+
 FILE *jsoutput;
 
 // the minify callbacks
@@ -276,7 +278,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "\t-d        enable verbose debugging to stderr\n");
             fprintf(stderr, "\t-t        tolerate errors (tidy - experimental)\n");
             fprintf(stderr, "\t-j        transform via JTL (under development)\n");
-            exit(1);
+            exit(-1);
         }
     }
 
@@ -286,7 +288,7 @@ int main(int argc, char *argv[])
 		myinput = fopen(argv[optind],"r");
 		if(myinput == NULL) {
 			fprintf(stderr,"failed to open input file `%s'\n",argv[optind]);
-			exit(2);
+			exit(-2);
 		}
 	}
 	// alternate output file
@@ -294,32 +296,39 @@ int main(int argc, char *argv[])
 		jsoutput = fopen(filename,"w");
 		if(jsoutput == NULL) {
 			fprintf(stderr,"failed to open output file `%s'\n",filename);
-			exit(3);
+			exit(-3);
 		}
 	}
 
 	JsonNode * tree = jsonBuildJsonTreeFromFile(myinput == NULL ? stdin : myinput);
+	if(tree == NULL) {
+		exit(-4);
+	}
 
 	if(jtlfile != NULL) {
 		fprintf(stderr,"transform\n");
 		FILE *jtf = fopen(jtlfile,"r");
 		JsonNode * jtltree = jsonBuildJtlTreeFromFile(jtf);
+		if(jtltree == NULL) {
+			exit(-5);
+		}
 		fclose(jtf);
 		tree = jtlTransform(jtltree,tree);
+		if(tree == NULL) {
+			exit(-6);
+		}
 	}
 
+	int oc = 0;
 	if(prettyprint) {
-		fprintf(stderr,"pretty\n");
-		jsonPrintToFile(jsoutput,tree,JSONPRINT_PRETTY);
+		oc=jsonPrintToFile(jsoutput,tree,JSONPRINT_PRETTY);
 //	printf("line %d\n",__LINE__);
 //		setCallBacks(ppfcb);
 	} else if(minify) {
-		fprintf(stderr,"min\n");
-		jsonPrintToFile(jsoutput,tree,JSONPRINT_MINIFY);
+		oc=jsonPrintToFile(jsoutput,tree,JSONPRINT_MINIFY);
 //	printf("line %d\n",__LINE__);
 //.		setCallBacks(minifcb);
 	} else if(quiet)  {
-		fprintf(stderr,"nothing\n");
 //	printf("line %d\n",__LINE__);
 //		setCallBacks(noopfcb);
 	}
@@ -350,8 +359,65 @@ void jsonShowTree(FILE* out,JsonNode*js,int indent) {
 	}
 }
 
+int addNodeToParent(JsonNode*c,JsonNode*p) {
+	if(p->type == TYPE_OBJECT) {
+		if(c->type != TYPE_ELEMENT) {
+		}
+		jsonArrayAppend(p,c);
+	} else if(p->type == TYPE_ARRAY) {
+		jsonArrayAppend(p,c);
+	}
+}
+/** 
+	@param context, the current input data context
+	@param jtl, the current jtl instruction node 
+	@param, output node to parent
+
+ */
+JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
+	JsonNode*result = NULL;
+	JsonNode*it;
+	if(jtl!=NULL) switch(jtl->type) {
+		case TYPE_FUNC:
+			if(strcmp(jtl->str,"jpath") == 0) {
+				if(jtl->first == NULL) return NULL;
+				JpathNode *p =parseJpath(jtl->first->str);
+				result = jpathExecute(context,p);
+			}
+		break;
+		case TYPE_ARRAY:
+			result = jsonCreateArray(parent);
+			it = jtl->first;
+			while(it != NULL) {
+				jtlTraverse(it,context,result);
+				it = it->next;
+			}
+		break;
+		case TYPE_OBJECT:
+			result = jsonCreateObject(parent);
+			it = jtl->first;
+			while(it != NULL) {
+				jtlTraverse(it,context,result);
+				it = it->next;
+			}
+		break;
+		case TYPE_ELEMENT:
+			result = jsonCreateElement(parent,jtl->str);
+			jtlTraverse(it->first,context,result);
+		break;
+		case TYPE_STRING:
+			result = jsonCreateString(parent,jtl->str);
+		break;
+		case TYPE_NUMBER:
+			result = jsonCreateNumber(parent,jtl->ival,jtl->fval);
+		break;
+
+	}
+	return result;
+}
 JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
-	return jtl;
+	JsonNode *result = jtlTraverse(json,jtl,NULL);
+	return result;
 }
 
 int testBuilder(FILE *f) {

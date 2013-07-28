@@ -32,8 +32,6 @@ extern const jax_callbacks single_callback ;
 #define LOCATION XFUSE(BISONPREFIX,lloc)
 
 
-#define JSONALLOC(x) malloc(x)
-#define JSONFREE(x) free(x)
 
 #define appendJsonNode(p,c) 			{ \
 				if((p)->last == NULL) {			\
@@ -432,6 +430,17 @@ int indenter() {
 }
 
 
+
+void freeJsonNode(JsonNode*jn) {
+	JsonNode*c = jn->first;
+	while(c) {
+		freeJsonNode(c);
+		c = c->next;
+	}
+	if(jn->str) JSONFREE(jn->str);
+	JSONFREE(jn);
+}
+
  int (*sjcb)(__JAXEVT type, const char* p, long i, double f) = NULL;
 
 int parseJsonString(const char *s,int jtl) {
@@ -702,8 +711,13 @@ JsonNode* jsonCreateJsonp(const char*str) {
 JsonNode* jsonCreateKey(JsonNode*p,const char*str) {
 	return jsonNewNode(p,TYPE_ELEMENT,strdup(str),0L,NAN);
 }
+
 JsonNode* jsonCreateString(JsonNode*p,const char*str) {
 	return jsonNewNode(p,TYPE_STRING,strdup(str),0L,NAN);
+}
+
+JsonNode* jsonCreateElement(JsonNode*p,const char*str) {
+	return jsonNewNode(p,TYPE_ELEMENT,strdup(str),0L,NAN);
 }
 
 JsonNode* jsonCreateNumber(JsonNode*p,long ival, double fval) {

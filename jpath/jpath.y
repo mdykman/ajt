@@ -54,7 +54,7 @@
 		(j)->params = __prm;	\
 	}
 
-int jpatherror(const char*msg) ;
+//int jpatherror(JpathNode**p,const char*msg) ;
 int jpathcolumn = 0;
 
 
@@ -74,6 +74,8 @@ int jpathcolumn = 0;
 }
 
 %locations
+
+%parse-param { JpathNode **jpexp }
 
 %type<str> chars dstr sstr string label 
 
@@ -106,7 +108,10 @@ int jpathcolumn = 0;
 
 %% 
 
-jpath : abspath  { $$ = $1; }
+jpath : abspath  { 
+		$$ = $1; 
+		*jpexp = $$;
+	}
 
 abspath 
 	: relpath { $$ = $1; }
@@ -1053,6 +1058,11 @@ JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,l
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,mostof,0); }
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,sumof,1); }
 
+JsonNodeSet * __jpudf(JsonNodeSet *ctx, JpathNode *p) {
+	// to be implemented
+	return NULL;
+}
+
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data,int nargs, int ag, JpathNode *next) {
 	JpathNode* jp = JPATHALLOC(sizeof(JpathNode));
 	jp->proc = proc;
@@ -1116,10 +1126,25 @@ int jpatherror(const char*msg) {
  fprintf(stderr,"error at %d: %s\n",jpathcolumn,(msg)) ;
 }
 
-int parseJpath(const char *s) {
+int plistSize(JpathNode**jpn) {
+	int n = 0;
+	while(*jpn) {
+		++n;
+		++jpn;
+	}
+
+	return n;
+}
+
+JpathNode*parseJpath(const char *s) {
    YY_BUFFER_STATE buff = SCANSTRING(s);
    SWITCHTOBUFFER(buff);
-   int res = PARSE();
+	JpathNode *exp;
+   int res = PARSE(&exp);
    DELETEBUFFER(buff);
-   return res;
+	if(res == 0) {
+	   return exp;
+	} else {
+		return NULL;
+	}
 }

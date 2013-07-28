@@ -1,5 +1,4 @@
 
-
 BISONPREFIX=json
 CFLAGS= -DBISONPREFIX=${BISONPREFIX} -fPIC
 LDFLAGS=-lm
@@ -35,8 +34,8 @@ libajt.a	: ajson.l.o ajson.y.c
 libajt.so	: ajson.l.o ajson.y.c
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
 
-ajt : ajson.y.o ajson.l.o ajt.o
-	${CC} -lm ajson.y.o ajson.l.o ajt.o -o ajt
+ajt : ajson.y.o ajson.l.o ajt.o 
+	${CC} ajson.y.o ajson.l.o ajt.o jpath/jpath.l.o jpath/jpath.y.o -lm -o ajt
 
 ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex
 	flex  --header-file=ajson.l.h --prefix ${BISONPREFIX} -o ajson.l.c ajson.lex
