@@ -19,6 +19,7 @@
 *.output
 
 json-tool
+ajt
 
 
 *.y.c
