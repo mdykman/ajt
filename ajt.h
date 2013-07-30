@@ -6,6 +6,10 @@
 
 #define DEFAULT_FLOAT_FORMAT "%.6f"
 
+
+#define TRACE(x) fprintf(stderr,"%s:%d - %s\n",__FILE__,__LINE__,(x))
+
+
 #define JSONALLOC(x) malloc(x)
 #define JSONFREE(x) free(x)
 
@@ -85,6 +89,16 @@ typedef struct __JsonNode {
 
 // extern jax_callbacks jcb;
 // extern const jax_callbacks single_callback;
+#define appendJsonNode(p,c)         { \
+            if((p)->last == NULL) {       \
+               (p)->first = (p)->last = (c);       \
+               (p)->children = 1;                  \
+            } else {       \
+               (c)->prev = (p)->last;        \
+               (p)->last = (c)->prev->next = (c);        \
+               ((p)->children)++;         \
+            }                            \
+         }
 
 extern void freeJsonNode(JsonNode*jn);
 

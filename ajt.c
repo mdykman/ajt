@@ -220,6 +220,20 @@ jax_callbacks noopfcb = {
 	NULL, NULL, NULL, NULL
 };
 
+
+
+void showJsonNode(JsonNode*jn) {
+	if(jn == NULL) {
+		fprintf(stderr,"shownode: NULL\n");
+	} else {
+		fprintf(stderr,"type: %d\n",jn->type);
+		fprintf(stderr,"children: %d\n",jn->children);
+		fprintf(stderr,"first: %p\n",jn->first);
+		fprintf(stderr,"next: %p\n",jn->next);
+	}
+}
+
+
 int main(int argc, char *argv[])
 {
     int minify=0; 
@@ -306,12 +320,12 @@ int main(int argc, char *argv[])
 	}
 
 	if(jtlfile != NULL) {
-		fprintf(stderr,"transform\n");
 		FILE *jtf = fopen(jtlfile,"r");
 		JsonNode * jtltree = jsonBuildJtlTreeFromFile(jtf);
 		if(jtltree == NULL) {
 			exit(-5);
 		}
+	
 		fclose(jtf);
 		tree = jtlTransform(jtltree,tree);
 		if(tree == NULL) {
@@ -359,11 +373,25 @@ void jsonShowTree(FILE* out,JsonNode*js,int indent) {
 	}
 }
 
-int addNodeToParent(JsonNode*c,JsonNode*p) {
+int addNodeToParent(JsonNode*p,JsonNode*c) {
+	int result = 0;
+	switch(p->type) {
+		case TYPE_ARRAY:
+			jsonArrayAppend(p,c);
+			result = 1;
+		break;
+		case TYPE_OBJECT:
+			if(c->type == TYPE_ELEMENT) {
+				
+			}
+		break;
+		case TYPE_ELEMENT:
+		break;
+	}
+	return result;	
 	if(p->type == TYPE_OBJECT) {
 		if(c->type != TYPE_ELEMENT) {
 		}
-		jsonArrayAppend(p,c);
 	} else if(p->type == TYPE_ARRAY) {
 		jsonArrayAppend(p,c);
 	}
@@ -377,12 +405,14 @@ int addNodeToParent(JsonNode*c,JsonNode*p) {
 JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 	JsonNode*result = NULL;
 	JsonNode*it;
+//	showJsonNode(jtl);
 	if(jtl!=NULL) switch(jtl->type) {
 		case TYPE_FUNC:
 			if(strcmp(jtl->str,"jpath") == 0) {
 				if(jtl->first == NULL) return NULL;
 				JpathNode *p =parseJpath(jtl->first->str);
 				result = jpathExecute(context,p);
+				appendJsonNode(parent,result);
 			}
 		break;
 		case TYPE_ARRAY:
@@ -403,7 +433,7 @@ JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 		break;
 		case TYPE_ELEMENT:
 			result = jsonCreateElement(parent,jtl->str);
-			jtlTraverse(it->first,context,result);
+			jtlTraverse(jtl->first,context,result);
 		break;
 		case TYPE_STRING:
 			result = jsonCreateString(parent,jtl->str);
@@ -411,15 +441,17 @@ JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 		case TYPE_NUMBER:
 			result = jsonCreateNumber(parent,jtl->ival,jtl->fval);
 		break;
+		default: TRACE("unknown type");
 
 	}
 	return result;
 }
 JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
-	JsonNode *result = jtlTraverse(json,jtl,NULL);
+	JsonNode *result = jtlTraverse(jtl,json,NULL);
 	return result;
 }
 
+/*
 int testBuilder(FILE *f) {
 		JsonNode * tree = jsonBuildJsonTreeFromFile(f);
 		if(tree != NULL) {
@@ -430,3 +462,6 @@ int testBuilder(FILE *f) {
 		}
 		return 1;
 }
+
+
+*/

@@ -24,12 +24,12 @@ extern int jpathcolumn;
 %%
 
 <STRING>[^"\\]+ {
-//      jsonlval.str = strdup(yytext);
+      jpathlval.str = strdup(yytext);
       return CHAR;
    }
 
 <STRING>"\\".  {
-//      pEsc(&jsonlval.str,yytext);
+      pEsc(&jpathlval.str,yytext);
       return CHAR;
    }
 
@@ -40,12 +40,12 @@ extern int jpathcolumn;
 
 
 <SSTRING>[^'\\]+ {
- //     jsonlval.str = strdup(yytext);
+      jpathlval.str = strdup(yytext);
       return CHAR;
    }
 
 <SSTRING>"\\".  {
-  //    pEsc(&jsonlval.str,yytext);
+      pEsc(&jpathlval.str,yytext);
       return CHAR;
    }
 
@@ -66,6 +66,7 @@ extern int jpathcolumn;
 
 [*][*] { return DSTAR; }
 [*]	{ return '*'; } 
+[/]   { return '/'; }
 
 [.][.][.] { return TDOT; }
 [.][.] { return DDOT; }
@@ -105,8 +106,9 @@ uniq { return UNIQ; }
 
 key { return QKEY; }
 value { return VALUE; } 
+ /*
 name { return NAME; } 
-
+	*/
 avg { return AVG; }
 min { return MIN; }
 max { return MAX; }
@@ -129,10 +131,20 @@ lt { return LT; }
 gte { return GTES; }
 lte { return LTES; }
 
-[-+]?[0-9]+ { return INTEGER; }
-[-+]?[0-9]+[.][0-9]+(e[-+]?[0-9]+)? { return FLOAT; }
+[-+]?[0-9]+ { 
+		jpathlval.ival = atol(yytext);
+		return INTEGER; 
+	}
+[-+]?[0-9]+[.][0-9]+(e[-+]?[0-9]+)? { 
+		char*endp;
+		jpathlval.fval = strtod(yytext,&endp);
+		return FLOAT; 
+	}
 
-[$a-zA-Z_][$a-zA-Z0-9_-]+      { return LABEL; }
+[$a-zA-Z_][$a-zA-Z0-9_-]+      { 
+	jpathlval.str = strdup(yytext);
+	return LABEL; 
+	}
 
 . { // matches garbage
 	yyterminate();

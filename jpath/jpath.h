@@ -29,10 +29,15 @@ typedef JsonNodeSet* (*jpathproc)(JsonNodeSet*context,struct JpathNode *array);
 		struct JpathNode *next;
 	} JpathNode;
 
-#define JPATHFUNC(nm,p,n,a) newJpathNode((p),(nm),NULL,NULL,(n),(a),NULL)
-#define JPATHFUNCDATA(nm,p,d) newJpathNode((p),(nm),NULL,(d),0,0,NULL)
+#define JPATHFUNC(nm,p,n,a) 		\
+	newJpathNode((p),(nm),NULL,NULL,(n),(a),NULL)
+	
+#define JPATHFUNCDATA(nm,p,d) \
+	newJpathNode((p),(nm),NULL,(d),0,0,NULL)
 
 int plistSize(JpathNode**);
+
+JpathNode* functionFactory(const char*fname) ;
 
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data, int nargs, int ag, JpathNode *next) ;
 JpathNode* parseJpath(const char *s);

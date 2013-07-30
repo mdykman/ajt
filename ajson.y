@@ -33,6 +33,7 @@ extern const jax_callbacks single_callback ;
 
 
 
+/*
 #define appendJsonNode(p,c) 			{ \
 				if((p)->last == NULL) {			\
 					(p)->first = (p)->last = (c);			\
@@ -44,6 +45,7 @@ extern const jax_callbacks single_callback ;
 				}                            \
 			}
 
+*/
 //extern int  allowErrors;
 
 #define YYERROR_VERBOSE 1

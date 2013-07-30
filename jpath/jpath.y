@@ -80,7 +80,6 @@ int jpathcolumn = 0;
 %type<str> chars dstr sstr string label 
 
 %type<jp> func
-%type<jp> builtin arithop miscop agop strop 
 %type<jp> fstep bstep step
 
 
@@ -114,11 +113,14 @@ jpath : abspath  {
 	}
 
 abspath 
-	: relpath { $$ = $1; }
-	| '/' relpath { $$ = NULL; }
+	: relpath { $$ = $1; 
+	}
+	| '/' relpath { $$ = NULL; 
+	}
 
 relpath
-	: cmpexp  { $$ = $1; }
+	: cmpexp  { $$ = $1; 
+	}
 	| relpath '/' cmpexp {
 		$$ = $1;
 		$$->next = $3;
@@ -183,7 +185,9 @@ test
    : nametest { $$ = $1; }
 	| kindtest { $$ = $1; }
 
-nametest: label { $$ = JPATHFUNCDATA("name",__jpnametest,jsonCreateString(NULL,$1));  }
+nametest: label { 
+	$$ = JPATHFUNCDATA("name",__jpnametest,jsonCreateString(NULL,$1));  
+	}
 
 label: LABEL { $$ = $1; }
 
@@ -215,10 +219,10 @@ fcall
 	| func '(' ')' { $$ = $1; }
 	
 func 
-	: builtin { $$ = $1; }
-	| label { 
-		$$ = JPATHFUNC("UDF",__jpudf,-1,1); 
-		$$->data = jsonCreateString(NULL,$1);
+	: label { 
+		$$ = functionFactory($1);
+//		$$ = JPATHFUNC($1,__jpudf,-1,1); 
+//		$$->data = jsonCreateString(NULL,$1);
 	}
 
 plist
@@ -295,6 +299,7 @@ rangexp : jpath DDOT jpath
 	| jpath DDOT
 	| plist
 
+   /*
 builtin
 	: miscop { $$ = $1; }
   	| agop { $$ = $1; }
@@ -316,10 +321,6 @@ miscop
 	| GROUP { $$ = JPATHFUNC("group",__jpnoop,-1,1); }
 	| SORT { $$ = JPATHFUNC("sort",__jpnoop,-1,1); }
    | IF  { $$ = JPATHFUNC("if",__jpif,1,0); }
-/*
-JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, int nargs, int ag, JpathNode *next) {
-#define JPATHFUNC(nm,p,n,a) newJpathNode((p),(nm),NULL,(n),(a),NULL)
-*/
 
 agop 
 	: AVG { $$ =  JPATHFUNC("avg",__jpavg,-1,1); }
@@ -344,6 +345,7 @@ strop
 	| INDEXOF { $$ = JPATHFUNC("indexof",__jpnoop,-1,1); }
 	| RSUB { $$ = JPATHFUNC("rsub",__jpnoop,-1,1); }
 
+*/
 %% 
 
 #define JSONNODESETINIT 1024
@@ -433,7 +435,7 @@ int jsonTestBooleanNode(JsonNode*ctx) {
 JpathNode* jsonGetJpathParam(JpathNode*ptr,int x)  { 
 	JpathNode **pp = ptr->params;
 	int i = 0;
-	for(;i <= x && (*pp) != NULL; ++i,++pp){
+	for(;i <= x && pp != NULL && (*pp) != NULL; ++i,++pp){
 		if((x) == i) return *pp;
 	}
 	return NULL;
@@ -454,7 +456,7 @@ JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode *p) {
 
 #define JSONSTARTCONTEXT(x,p)   	\
 	JsonNodeSet *context = (x);		\
-	{ \
+	if((p)->nargs!=0) { \
 	JsonNodeSet *_ctx = tempContext(context,(p));	\
 	if(_ctx != NULL) {			\
 		context = _ctx;					\
@@ -584,18 +586,23 @@ JsonNodeSet *__jpscalartest(JsonNodeSet *ctx,JpathNode *jn) {
 }
 
 JsonNodeSet *__jpnametest(JsonNodeSet *ctx,JpathNode *jn) {
-	JSONTESTPARAMS(jn,1);
+//	JSONTESTPARAMS(jn,0);
 	JsonNodeSet *rjns = newJsonNodeSet();
 	if(ctx->count > 0) {
+	TRACE("");
 		int i=0;
 		for(;i<ctx->count;++i) {
+	TRACE(jn->data->str);
+	jsonPrintToFile(stderr,ctx->nodes[i],JSONPRINT_PRETTY);
 			JsonNode *ir = jsonGetMember(
 				ctx->nodes[i],
 				jn->data->str);
 			if(ir != NULL) {
+	TRACE("");
 				addJsonNode(rjns,ir);
 			} else {
-				addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
+	TRACE("");
+//				if(ctx->count == 1) addJsonNode(rjns,jsonCreateNull(NULL));
 			}
 		}
 	}
@@ -992,12 +999,12 @@ JsonNodeSet * __jpcount(JsonNodeSet *ctx, JpathNode *p) {
 
 JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode *p) {
 	JsonNodeSet * ns = newJsonNodeSet();
-	if(ctx->count == 0) { return ns; }
 	JSONSTARTCONTEXT(ctx,p);
 	if(context->count == 0) { return ns; }
 	int i;
 	for(i=0;i<context->count;++i) {
-		addJsonNode(ns, jsonCreateNumber(NULL,context->nodes[i]->children,context->nodes[i]->children));
+		JsonNode *jjn = jsonCreateNumber(NULL,context->nodes[i]->children,context->nodes[i]->children);
+		addJsonNode(ns, jjn);
 	}
 	JSONENDCONTEXT()
 	return ns;
@@ -1006,20 +1013,29 @@ JsonNodeSet * __jpsize(JsonNodeSet *ctx, JpathNode *p) {
 JsonNodeSet * __jplimit(JsonNodeSet *ctx, JpathNode *p,double(*choose)(double,double),int acc) {
 	JsonNodeSet * ns = newJsonNodeSet();
 	if(ctx->count == 0) { return ns; }
+TRACE("");
 	JSONSTARTCONTEXT(ctx,p)
 	JsonNode *parent = ctx->nodes[0]->parent;
 
+jsonPrintToFile(stderr,parent,JSONPRINT_PRETTY);
 
+
+TRACE("");
 	if(context->nodes[0]->type == TYPE_NUMBER) {
-		double total = acc ? context->nodes[0]->fval : 0;
+//		double total = acc ? context->nodes[0]->fval : 0;
+		double total = NAN;
 
+TRACE("");
 		int i = 0;
 		for(;i<context->count;++i) {
-			total = choose(total,context->nodes[i]->fval);
+			total = choose(context->nodes[i]->fval,total);
 			// if they all share a parent, then the result will share that parent
 			parent = parent == context->nodes[i]->parent ? parent : NULL;
+TRACE("");
 		}
+TRACE("");
 		addJsonNode(ns,jsonCreateNumber(parent,(long)total,total));
+TRACE("");
 	} else if(context->nodes[0]->type == TYPE_OBJECT) {
 		JsonNode*r=jsonCreateObject(NULL);
 		int i;
@@ -1029,38 +1045,179 @@ JsonNodeSet * __jplimit(JsonNodeSet *ctx, JpathNode *p,double(*choose)(double,do
 				while(key!=NULL) {
 					const char*name=key->str;
 					JsonNode* val=key->first;
+TRACE("");
 					if(val->type == TYPE_NUMBER) {
 						JsonNode* rn=jsonGetMember(r,name);
 						if(rn == NULL) {
 							double total = acc ? val->fval : 0;
+TRACE("");
 							rn = jsonCreateNumber(r,(long)total,total);	
+TRACE("");
 						}
 						rn->fval = choose(rn->fval,val->fval);
 						rn->ival = (long) rn->fval;
 					}
+TRACE("");
 					key =key->next;
 				}
 				parent = parent == context->nodes[i]->parent ? parent : NULL;
+TRACE("");
 			}
 		}
+TRACE("");
 		r->parent=parent;
+TRACE("");
 		addJsonNode(ns,r);
 	}
 	JSONENDCONTEXT();
+TRACE("");
 	return ns;
 }
 
-double mostof(double a, double b) { return a > b ? a : b; }
-double sumof(double a, double b) { return a + b; }
-double leastof(double a, double b) { return a < b ? a : b; }
+double mostof(double a, double b) { return b == NAN ? a : a > b ? a : b; }
+double sumof(double a, double b) { return b == NAN ? a : a + b; }
+double leastof(double a, double b) { return b == NAN ? a : a < b ? a : b; }
 
 JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,leastof,0); }
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,mostof,0); }
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,sumof,1); }
 
+/*
+
+miscop
+   : QKEY { $$ = JPATHFUNC("qkey",__jpnoop,-1,1); }
+   | VALUE { $$ = JPATHFUNC("value",__jpnoop,-1,1); }
+	| GROUP { $$ = JPATHFUNC("group",__jpnoop,-1,1); }
+	| SORT { $$ = JPATHFUNC("sort",__jpnoop,-1,1); }
+   | IF  { $$ = JPATHFUNC("if",__jpif,1,0); }
+
+strop 
+	: STRINGF { $$ = $1; }
+   | CONCAT { JPATHFUNC("concat",__jpconcat,-1,0); }
+   | UPPER { $$ = JPATHFUNC("upper",__jpupper,1,0); }
+   | LOWER { $$ = JPATHFUNC("lower",__jplower,1,0); }
+   | EQ { $$ = JPATHFUNC("eq",__jpeq,2,0); }
+   | NEQ { $$ = JPATHFUNC("neq",__jpneq,2,0); }
+	| GT { $$ = JPATHFUNC("gt",__jpgt,2,0); }
+	| LT { $$ = JPATHFUNC("lt",__jplt,2,0); }
+	| GTES { $$ = JPATHFUNC("gtes",__jpgte,2,0); }
+	| LTES { $$ = JPATHFUNC("ltes",__jplte,2,0); }
+	| SUBSTR { $$ = JPATHFUNC("substr",__jpnoop,-1,1); }
+	| MATCH { $$ = JPATHFUNC("match",__jpnoop,-1,1); }
+	| INDEXOF { $$ = JPATHFUNC("indexof",__jpnoop,-1,1); }
+	| RSUB { $$ = JPATHFUNC("rsub",__jpnoop,-1,1); }
+
+*/
+
+JpathNode* functionFactory(const char*fname) {
+	JpathNode*result = NULL;
+
+	if(strcmp(fname,"size") == 0) {
+		result = JPATHFUNC("size",__jpsize,-1,1);
+	} else if(strcmp(fname,"avg") == 0) {
+		result = JPATHFUNC("avg",__jpavg,-1,1);
+	} else if(strcmp(fname,"min") == 0) {
+		result = JPATHFUNC("min",__jpmin,-1,1);
+	} else if(strcmp(fname,"max") == 0) {
+		result = JPATHFUNC("max",__jpmax,-1,1);
+	} else if(strcmp(fname,"sum") == 0) {
+		result = JPATHFUNC("sum",__jpsum,-1,1);
+	}
+
+	else if(strcmp(fname,"sqrt") == 0) {
+		result = JPATHFUNC("sqrt",__jpsqrt,-1,1);
+	}
+	else if(strcmp(fname,"pow") == 0) {
+		result = JPATHFUNC("pow",__jppow,-1,1);
+	}
+	else if(strcmp(fname,"floor") == 0) {
+		result = JPATHFUNC("floor",__jpfloor,-1,1);
+	}
+	else if(strcmp(fname,"ceil") == 0) {
+		result = JPATHFUNC("ceil",__jpceil,-1,1);
+	}
+	else if(strcmp(fname,"round") == 0) {
+		result = JPATHFUNC("round",__jpround,-1,1);
+	}
+	else if(strcmp(fname,"rand") == 0) {
+		result = JPATHFUNC("rand",__jprand,-1,1);
+	}
+
+	else if(strcmp(fname,"stringf") == 0) {
+		result = JPATHFUNC("stringf",__jpnoop,-1,0);
+	}
+	else if(strcmp(fname,"concat") == 0) {
+		result = JPATHFUNC("concat",__jpconcat,-1,0);
+	}
+	else if(strcmp(fname,"upper") == 0) {
+		result = JPATHFUNC("upper",__jpupper,1,0);
+	}
+	else if(strcmp(fname,"lower") == 0) {
+		result = JPATHFUNC("lower",__jplower,1,0);
+	}
+	else if(strcmp(fname,"eq") == 0) {
+		result = JPATHFUNC("eq",__jpeq,2,0);
+	}
+	else if(strcmp(fname,"neq") == 0) {
+		result = JPATHFUNC("neq",__jpneq,2,0);
+	}
+	else if(strcmp(fname,"gt") == 0) {
+		result = JPATHFUNC("gt",__jpgt,2,0);
+	}
+	else if(strcmp(fname,"lt") == 0) {
+		result = JPATHFUNC("lt",__jplt,2,0);
+	}
+	else if(strcmp(fname,"gte") == 0) {
+		result = JPATHFUNC("gte",__jpgte,2,0);
+	}
+	else if(strcmp(fname,"lte") == 0) {
+		result = JPATHFUNC("lte",__jplte,2,0);
+	}
+	else if(strcmp(fname,"substr") == 0) {
+		result = JPATHFUNC("substr",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"match") == 0) {
+		result = JPATHFUNC("match",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"indexof") == 0) {
+		result = JPATHFUNC("indexof",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"rsub") == 0) {
+		result = JPATHFUNC("rsub",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"key") == 0) {
+		result = JPATHFUNC("key",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"value") == 0) {
+		result = JPATHFUNC("value",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"group") == 0) {
+		result = JPATHFUNC("group",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"sort") == 0) {
+		result = JPATHFUNC("sort",__jpnoop,-1,1);
+	}
+	else if(strcmp(fname,"if") == 0) {
+		result = JPATHFUNC("if",__jpif,1,0);
+	} else {
+		result = JPATHFUNC("UDF",__jpudf,-1,0);
+		result->data = jsonCreateString(NULL,fname);
+	}
+
+	return result;
+}
+
+JsonNodeSet *__jpfunc(JsonNodeSet *ctx, JpathNode*p) {
+	const char*fname=p->name;
+	if(strcmp(fname,"size") == 0) {
+	} else {
+		return __jpudf(ctx,p);
+	}
+}
+
 JsonNodeSet * __jpudf(JsonNodeSet *ctx, JpathNode *p) {
 	// to be implemented
-	return NULL;
+	return __jpident(ctx,p);
 }
 
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data,int nargs, int ag, JpathNode *next) {
@@ -1081,32 +1238,61 @@ JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) {
 	addJsonNode(_ctx,ctx);
 	JsonNodeSet *rs = __jpathExecute(_ctx,jn);
 	if(rs!=NULL) {
-		res = jsonNodeSetGet(rs,0);
-		freeJsonNodeSet(rs);
+		if(rs->count == 0) {
+			res = jsonCreateNull(NULL);
+		} else if(rs->count == 1) {
+			res = jsonNodeSetGet(rs,0);
+		} else {
+			res = jsonCreateArray(NULL);
+			int i;
+			for(i = 0; i < rs->count; ++i) {
+				jsonArrayAppend(res,rs->nodes[i]);
+			}
+		}
 	}
+	freeJsonNodeSet(rs);
 	freeJsonNodeSet(_ctx);
 	return res;
 }
 
 JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) {
 
+fprintf(stderr,"\tjpathExecute: %s\n",jn->name);
 	JsonNodeSet *rjns;
+	// aggregate flag means the function expects the whole context at once
+	// otherwise, item at a time
 	if(jn->aggr) {
+	TRACE("");
 		rjns = jn->proc(ctx,jn);
 	} else { 
+	TRACE("");
 		rjns = newJsonNodeSet();
-		JsonNodeSet *params = newJsonNodeSet();
 		if(ctx->count > 0) {
-// what voodoo is this supposed to be ??
+// we are going to resuse the same nodeset over and over, only
+// swapping out the single json node therein contained
+			JsonNodeSet *params = newJsonNodeSet();
 			addJsonNode(params, jsonCreateNumber(NULL,0,0));
 			jsonFree(params->nodes[0]);
 
 			int i = 0;
 			for(; i < ctx->count; ++i) {
-				params->nodes[0] = ctx->nodes[i];
-				JsonNodeSet *ir = jn->proc(params,jn);
-				addJsonNodeSet(rjns,ir);
-				freeJsonNodeSet(ir);
+TRACE("");
+				if(ctx->nodes[i]->type == TYPE_ARRAY) {
+					JsonNode*el = ctx->nodes[i]->first;
+					while(el) {
+						params->nodes[0] = el;
+						JsonNodeSet *ir = jn->proc(params,jn);
+						addJsonNodeSet(rjns,ir);
+						freeJsonNodeSet(ir);
+						el = el->next;
+					}
+				} else {
+//jsonPrintToFile(stderr,params->nodes[0],JSONPRINT_PRETTY);
+					params->nodes[0] = ctx->nodes[i];
+					JsonNodeSet *ir = jn->proc(params,jn);
+					addJsonNodeSet(rjns,ir);
+					freeJsonNodeSet(ir);
+				}
 			}
 			freeJsonNodeSet(params);
 		}
@@ -1137,14 +1323,19 @@ int plistSize(JpathNode**jpn) {
 }
 
 JpathNode*parseJpath(const char *s) {
+TRACE("");
    YY_BUFFER_STATE buff = SCANSTRING(s);
    SWITCHTOBUFFER(buff);
 	JpathNode *exp;
+TRACE("");
    int res = PARSE(&exp);
+TRACE("");
    DELETEBUFFER(buff);
 	if(res == 0) {
+TRACE("");
 	   return exp;
 	} else {
+TRACE("");
 		return NULL;
 	}
 }
