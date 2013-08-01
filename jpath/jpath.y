@@ -116,7 +116,8 @@ abspath
 	}
 	| '/' relpath { 
 	 	 $$ = JPATHFUNC("topp",__jptopparent,0,0); 
-		 $$->next = $2;
+		 JPATHAPPEND($$,$2);
+//		 $$->next = $2;
 	}
 
 relpath
@@ -124,7 +125,8 @@ relpath
 	}
 	| relpath '/' cmpexp {
 		$$ = $1;
-		$$->next = $3;
+//		$$->next = $3;
+		 JPATHAPPEND($$,$3);
 	}
 
 /*
@@ -443,6 +445,14 @@ JpathNode* jsonGetJpathParam(JpathNode*ptr,int x)  {
 	return NULL;
 }
 
+JsonNodeSet *evalParam(JsonNodeSet *ctx,JpathNode *p,int n) {
+	JpathNode *p1 = jsonGetJpathParam(p,n);
+	if(p1 != NULL) {
+		return __jpathExecute(ctx,p1);
+	}
+	return NULL;
+}
+
 JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode *p) {
 	JpathNode *p1 = jsonGetJpathParam(p,0);
 	if(p1!=NULL) {
@@ -458,7 +468,7 @@ JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode *p) {
 
 #define JSONSTARTCONTEXT(x,p)   	\
 	JsonNodeSet *context = (x);		\
-	if((p)->nargs!=0) { \
+	if((p) != NULL && (p)->nargs!=0) { \
 	JsonNodeSet *_ctx = tempContext(context,(p));	\
 	if(_ctx != NULL) {			\
 		context = _ctx;					\
@@ -600,7 +610,8 @@ JsonNodeSet *__jpnametest(JsonNodeSet *ctx,JpathNode *jn) {
 				ctx->nodes[i],
 				jn->data->str);
 			if(ir != NULL) {
-	TRACE("");
+	TRACE("adding");
+	jsonPrintToFile(stderr,ir,JSONPRINT_PRETTY);
 				addJsonNode(rjns,ir);
 			} else {
 	TRACE("");
@@ -945,26 +956,15 @@ JsonNodeSet *__jpconcat(JsonNodeSet *ctx,JpathNode *jn) {
 	return ctx;
 }
 
-/*
-JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) {
-	JsonNodeSet * ns = newJsonNodeSet();
-	if(ctx->count == 0) { return ns; }
-	JSONSTARTCONTEXT(ctx,p);
-	// peek 
-	if(context->nodes[0]->type == TYPE_NUMBER) {
-	} else if(context->nodes[0]->type == TYPE_OBJECT) {
-	} else if(context->nodes[0]->type == TYPE_ARRAY) {
-	}
-	JSONENDCONTEXT();
-	return ns;
-}
-*/
 JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode *p) {
 	JsonNodeSet * ns = newJsonNodeSet();
 	if(ctx->count == 0) { return ns; }
+TRACE("");
 	JSONSTARTCONTEXT(ctx,p);
 
+TRACE("");
 	int cnt = context->count;
+TRACE("");
 /* 
 	__jpsum will return a  NodeSet with a single member
 		that member will be
@@ -973,17 +973,28 @@ JsonNodeSet * __jpavg(JsonNodeSet *ctx, JpathNode *p) {
 		```?? TYPE_ARRAY to be tranversed optionally?
 		on error: TYPE_NUMBER with value NAN
   */
-	JsonNodeSet *rs = __jpsum(context,NULL);
+TRACE("");
+	JsonNodeSet *rs = __jpsum(context,p);
+TRACE("");
 	JsonNode*r=rs->nodes[0];
+TRACE("");
 	freeJsonNodeSet(rs);
+	rs = newJsonNodeSet();
+TRACE("");
 	if(r->type == TYPE_NUMBER) {
-		if(r->fval == NAN) {
+TRACE("");
+		if(isnan(r->fval)) {
+TRACE("");
 			addJsonNode(rs,jsonCreateNumber(NULL,0L,NAN));
 		} else {
+TRACE("");
 			double df = r->fval / context->count;
+TRACE("");
 			addJsonNode(rs,jsonCreateNumber(NULL,(long) df,df));
+TRACE("");
 		}
 	} else {
+TRACE("");
 	// it's an object::
 		JsonNode* container = jsonCreateObject(NULL);
 		JsonNode *el =   r->first;
@@ -1032,81 +1043,71 @@ JsonNodeSet * __jplimit(JsonNodeSet *ctx, JpathNode *p,double(*choose)(double,do
 	if(ctx->count == 0) { return ns; }
 TRACE("");
 	JSONSTARTCONTEXT(ctx,p)
-	JsonNode *parent = ctx->nodes[0]->parent;
-
-jsonPrintToFile(stderr,parent,JSONPRINT_PRETTY);
+TRACE("");
 
 
+	int i;
+	double total = NAN;
+	for(i=0;i<context->count;++i) {
 TRACE("");
-	if(context->nodes[0]->type == TYPE_NUMBER) {
-//		double total = acc ? context->nodes[0]->fval : 0;
-		double total = NAN;
+//		fprintf(stderr,"type is %d\n",context->nodes[i]->type);
+//		fprintf(stderr,"children is %d\n",context->nodes[i]->children);
+jsonPrintToFile(stderr,context->nodes[i],JSONPRINT_PRETTY);
 
+
+
+		total = choose(context->nodes[i]->fval,total);
+		fprintf(stderr,"choosing from %f, total is %f\n",context->nodes[i]->fval,total);
+			/*
+		if(context->nodes[i]->type == ARRAY) {
 TRACE("");
-		int i = 0;
-		for(;i<context->count;++i) {
-			total = choose(context->nodes[i]->fval,total);
-			// if they all share a parent, then the result will share that parent
-			parent = parent == context->nodes[i]->parent ? parent : NULL;
+
+
+
+			JsonNode*it=context->nodes[i]->first;
+			while(it) {
 TRACE("");
-		}
-TRACE("");
-		addJsonNode(ns,jsonCreateNumber(parent,(long)total,total));
-TRACE("");
-	} else if(context->nodes[0]->type == TYPE_OBJECT) {
-		JsonNode*r=jsonCreateObject(NULL);
-		int i;
-		for(i=0;i < (context->count);++i) {
-			if(context->nodes[i]->type == TYPE_OBJECT) {
-				JsonNode*key= context->nodes[i]->first;
-				while(key!=NULL) {
-					const char*name=key->str;
-					JsonNode* val=key->first;
-TRACE("");
-					if(val->type == TYPE_NUMBER) {
-						JsonNode* rn=jsonGetMember(r,name);
-						if(rn == NULL) {
-							double total = acc ? val->fval : 0;
-TRACE("");
-							rn = jsonCreateNumber(r,(long)total,total);	
-TRACE("");
-						}
-						rn->fval = choose(rn->fval,val->fval);
-						rn->ival = (long) rn->fval;
-					}
-TRACE("");
-					key =key->next;
-				}
-				parent = parent == context->nodes[i]->parent ? parent : NULL;
-TRACE("");
+				fprintf(stderr,"choosing from %f\n",it->fval);
+				total = choose(it->fval,total);
+				it = it->next;
 			}
 		}
-TRACE("");
-		r->parent=parent;
-TRACE("");
-		addJsonNode(ns,r);
+
+	*/
+
+
+
+
 	}
+	addJsonNode(ns,jsonCreateNumber(NULL,(long)total,total));
 	JSONENDCONTEXT();
 TRACE("");
 	return ns;
 }
 
-double mostof(double a, double b) { return b == NAN ? a : a > b ? a : b; }
-double sumof(double a, double b) { return b == NAN ? a : a + b; }
-double leastof(double a, double b) { return b == NAN ? a : a < b ? a : b; }
+double mostof(double a, double b) { return isnan(b) ? a : (a > b ? a : b); }
+double sumof(double a, double b) { 
+	double result = isnan(b) ? a : (a + b);
+	fprintf(stderr,"a = %f, b = %f, result = %f\n",a,b,result);
+	return result;
+}
+double leastof(double a, double b) { return isnan(b) ? a : (a < b ? a : b); }
 
 JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,leastof,0); }
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,mostof,0); }
-JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,sumof,1); }
+JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,sumof,0); }
 
 JsonNodeSet * __jpunion(JsonNodeSet *ctx, JpathNode *p) { 
 	JSONTESTPARAMS(p,2);
+	/*
 	JpathNode *p1 = jsonGetJpathParam(p,0);
 	JpathNode *p2 = jsonGetJpathParam(p,1);
 	JsonNodeSet *r1=__jpathExecute(ctx,p1);
 	JsonNodeSet *r2=__jpathExecute(ctx,p2);
+	*/
+	JsonNodeSet *r1=evalParam(ctx,p,0);
+	JsonNodeSet *r2=evalParam(ctx,p,1);
 	addJsonNodeSet(r1,r2);
-	
 	freeJsonNodeSet(r2);
 	return r1;
 }
@@ -1228,10 +1229,14 @@ fprintf(stderr,"\tjpathExecute: %s\n",jn->name);
 			addJsonNode(params, jsonCreateNumber(NULL,0,0));
 			jsonFree(params->nodes[0]);
 
+TRACE("exec");
+TRACE(jn->name);
 			int i = 0;
 			for(; i < ctx->count; ++i) {
-TRACE("");
+TRACE("context");
+jsonPrintToFile(stderr,ctx->nodes[i],JSONPRINT_PRETTY);
 				if(ctx->nodes[i]->type == TYPE_ARRAY) {
+TRACE("");
 					JsonNode*el = ctx->nodes[i]->first;
 					while(el) {
 						params->nodes[0] = el;
@@ -1241,7 +1246,7 @@ TRACE("");
 						el = el->next;
 					}
 				} else {
-//jsonPrintToFile(stderr,params->nodes[0],JSONPRINT_PRETTY);
+TRACE("");
 					params->nodes[0] = ctx->nodes[i];
 					JsonNodeSet *ir = jn->proc(params,jn);
 					addJsonNodeSet(rjns,ir);
@@ -1254,6 +1259,7 @@ TRACE("");
 
 	JsonNodeSet * result;
 	if(jn->next != NULL) {
+TRACE("NEXT");
 		result = __jpathExecute(rjns,jn->next);
 		freeJsonNodeSet(rjns);
 	} else {

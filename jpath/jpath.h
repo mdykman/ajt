@@ -35,6 +35,15 @@ typedef JsonNodeSet* (*jpathproc)(JsonNodeSet*context,struct JpathNode *array);
 #define JPATHFUNCDATA(nm,p,d) \
 	newJpathNode((p),(nm),NULL,(d),0,0,NULL)
 
+#define JPATHAPPEND(ch,n)  								\
+	{																\
+		JpathNode *__it = (ch); 							\
+		while(__it->next != NULL) __it=__it->next;	\
+		__it->next = (n);										\
+	}
+		
+		
+
 int plistSize(JpathNode**);
 
 JpathNode* functionFactory(const char*fname) ;
