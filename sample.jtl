@@ -1,0 +1,6 @@
+{
+	count : jpath("emps/size()"),
+	cc : jpath("size(emps)"),
+	names: jpath("emps/name"),
+	salaries: jpath("emps/salary")
+}

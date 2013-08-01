@@ -54,7 +54,6 @@
 		(j)->params = __prm;	\
 	}
 
-//int jpatherror(JpathNode**p,const char*msg) ;
 int jpathcolumn = 0;
 
 
@@ -115,7 +114,9 @@ jpath : abspath  {
 abspath 
 	: relpath { $$ = $1; 
 	}
-	| '/' relpath { $$ = NULL; 
+	| '/' relpath { 
+	 	 $$ = JPATHFUNC("topp",__jptopparent,0,0); 
+		 $$->next = $2;
 	}
 
 relpath
@@ -158,7 +159,10 @@ cmpop
 
 orexp
 	: mathexp { $$ = $1; }
-	| orexp '|' mathexp
+	| orexp '|' mathexp {
+		$$ = JPATHFUNC("union",__jpunion,2,1); 
+		PARAMPAIR($$,$1,$3);
+	}
 
 mathexp 
 	: pathstep  { $$ = $1; }
@@ -221,8 +225,6 @@ fcall
 func 
 	: label { 
 		$$ = functionFactory($1);
-//		$$ = JPATHFUNC($1,__jpudf,-1,1); 
-//		$$->data = jsonCreateString(NULL,$1);
 	}
 
 plist
@@ -695,6 +697,21 @@ JsonNodeSet *__jppeach(JsonNodeSet *ctx,JpathNode *jn) {
 	return rjns;
 }
 
+JsonNodeSet *__jptopparent(JsonNodeSet *ctx,JpathNode *jn) {
+	JSONSTARTCONTEXT(ctx,jn);
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i=0;
+	for(;i<context->count;++i) {
+		JsonNode *pp =  context->nodes[i];
+		while(pp->parent) {
+			pp=pp->parent;
+		}
+		addJsonNode(rjns,pp);
+	}
+	JSONENDCONTEXT();
+	return rjns;
+}
+
 JsonNodeSet *__jpparent(JsonNodeSet *ctx,JpathNode *jn) {
 	JSONSTARTCONTEXT(ctx,jn);
 	JsonNodeSet *rjns = newJsonNodeSet();
@@ -1082,128 +1099,65 @@ JsonNodeSet * __jpmin(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,l
 JsonNodeSet * __jpmax(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,mostof,0); }
 JsonNodeSet * __jpsum(JsonNodeSet *ctx, JpathNode *p) { return __jplimit(ctx,p,sumof,1); }
 
-/*
-
-miscop
-   : QKEY { $$ = JPATHFUNC("qkey",__jpnoop,-1,1); }
-   | VALUE { $$ = JPATHFUNC("value",__jpnoop,-1,1); }
-	| GROUP { $$ = JPATHFUNC("group",__jpnoop,-1,1); }
-	| SORT { $$ = JPATHFUNC("sort",__jpnoop,-1,1); }
-   | IF  { $$ = JPATHFUNC("if",__jpif,1,0); }
-
-strop 
-	: STRINGF { $$ = $1; }
-   | CONCAT { JPATHFUNC("concat",__jpconcat,-1,0); }
-   | UPPER { $$ = JPATHFUNC("upper",__jpupper,1,0); }
-   | LOWER { $$ = JPATHFUNC("lower",__jplower,1,0); }
-   | EQ { $$ = JPATHFUNC("eq",__jpeq,2,0); }
-   | NEQ { $$ = JPATHFUNC("neq",__jpneq,2,0); }
-	| GT { $$ = JPATHFUNC("gt",__jpgt,2,0); }
-	| LT { $$ = JPATHFUNC("lt",__jplt,2,0); }
-	| GTES { $$ = JPATHFUNC("gtes",__jpgte,2,0); }
-	| LTES { $$ = JPATHFUNC("ltes",__jplte,2,0); }
-	| SUBSTR { $$ = JPATHFUNC("substr",__jpnoop,-1,1); }
-	| MATCH { $$ = JPATHFUNC("match",__jpnoop,-1,1); }
-	| INDEXOF { $$ = JPATHFUNC("indexof",__jpnoop,-1,1); }
-	| RSUB { $$ = JPATHFUNC("rsub",__jpnoop,-1,1); }
-
-*/
+JsonNodeSet * __jpunion(JsonNodeSet *ctx, JpathNode *p) { 
+	JSONTESTPARAMS(p,2);
+	JpathNode *p1 = jsonGetJpathParam(p,0);
+	JpathNode *p2 = jsonGetJpathParam(p,1);
+	JsonNodeSet *r1=__jpathExecute(ctx,p1);
+	JsonNodeSet *r2=__jpathExecute(ctx,p2);
+	addJsonNodeSet(r1,r2);
+	
+	freeJsonNodeSet(r2);
+	return r1;
+}
 
 JpathNode* functionFactory(const char*fname) {
 	JpathNode*result = NULL;
 
-	if(strcmp(fname,"size") == 0) {
-		result = JPATHFUNC("size",__jpsize,-1,1);
-	} else if(strcmp(fname,"avg") == 0) {
-		result = JPATHFUNC("avg",__jpavg,-1,1);
-	} else if(strcmp(fname,"min") == 0) {
-		result = JPATHFUNC("min",__jpmin,-1,1);
-	} else if(strcmp(fname,"max") == 0) {
-		result = JPATHFUNC("max",__jpmax,-1,1);
-	} else if(strcmp(fname,"sum") == 0) {
-		result = JPATHFUNC("sum",__jpsum,-1,1);
-	}
+	if(strcmp(fname,"size") == 0) 			{ result = JPATHFUNC("size",		__jpsize,	-1,	1); } 
 
-	else if(strcmp(fname,"sqrt") == 0) {
-		result = JPATHFUNC("sqrt",__jpsqrt,-1,1);
-	}
-	else if(strcmp(fname,"pow") == 0) {
-		result = JPATHFUNC("pow",__jppow,-1,1);
-	}
-	else if(strcmp(fname,"floor") == 0) {
-		result = JPATHFUNC("floor",__jpfloor,-1,1);
-	}
-	else if(strcmp(fname,"ceil") == 0) {
-		result = JPATHFUNC("ceil",__jpceil,-1,1);
-	}
-	else if(strcmp(fname,"round") == 0) {
-		result = JPATHFUNC("round",__jpround,-1,1);
-	}
-	else if(strcmp(fname,"rand") == 0) {
-		result = JPATHFUNC("rand",__jprand,-1,1);
-	}
+	else if(strcmp(fname,"avg") == 0) 		{ result = JPATHFUNC("avg",		__jpavg,		-1,	1); } 
+	else if(strcmp(fname,"min") == 0) 		{ result = JPATHFUNC("min",		__jpmin,		-1,	1); } 
+	else if(strcmp(fname,"max") == 0) 		{ result = JPATHFUNC("max",		__jpmax,		-1,	1); } 
+	else if(strcmp(fname,"sum") == 0) 		{ result = JPATHFUNC("sum",		__jpsum,		-1,	1); } 
 
-	else if(strcmp(fname,"stringf") == 0) {
-		result = JPATHFUNC("stringf",__jpnoop,-1,0);
-	}
-	else if(strcmp(fname,"concat") == 0) {
-		result = JPATHFUNC("concat",__jpconcat,-1,0);
-	}
-	else if(strcmp(fname,"upper") == 0) {
-		result = JPATHFUNC("upper",__jpupper,1,0);
-	}
-	else if(strcmp(fname,"lower") == 0) {
-		result = JPATHFUNC("lower",__jplower,1,0);
-	}
-	else if(strcmp(fname,"eq") == 0) {
-		result = JPATHFUNC("eq",__jpeq,2,0);
-	}
-	else if(strcmp(fname,"neq") == 0) {
-		result = JPATHFUNC("neq",__jpneq,2,0);
-	}
-	else if(strcmp(fname,"gt") == 0) {
-		result = JPATHFUNC("gt",__jpgt,2,0);
-	}
-	else if(strcmp(fname,"lt") == 0) {
-		result = JPATHFUNC("lt",__jplt,2,0);
-	}
-	else if(strcmp(fname,"gte") == 0) {
-		result = JPATHFUNC("gte",__jpgte,2,0);
-	}
-	else if(strcmp(fname,"lte") == 0) {
-		result = JPATHFUNC("lte",__jplte,2,0);
-	}
-	else if(strcmp(fname,"substr") == 0) {
-		result = JPATHFUNC("substr",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"match") == 0) {
-		result = JPATHFUNC("match",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"indexof") == 0) {
-		result = JPATHFUNC("indexof",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"rsub") == 0) {
-		result = JPATHFUNC("rsub",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"key") == 0) {
-		result = JPATHFUNC("key",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"value") == 0) {
-		result = JPATHFUNC("value",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"group") == 0) {
-		result = JPATHFUNC("group",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"sort") == 0) {
-		result = JPATHFUNC("sort",__jpnoop,-1,1);
-	}
-	else if(strcmp(fname,"if") == 0) {
-		result = JPATHFUNC("if",__jpif,1,0);
-	} else {
-		result = JPATHFUNC("UDF",__jpudf,-1,0);
-		result->data = jsonCreateString(NULL,fname);
-	}
+	else if(strcmp(fname,"sqrt") == 0) 		{ result = JPATHFUNC("sqrt",		__jpsqrt,	-1,	0); } 
+	else if(strcmp(fname,"pow") == 0) 		{ result = JPATHFUNC("pow",		__jppow,		-1,	0); } 
+	else if(strcmp(fname,"floor") == 0) 	{ result = JPATHFUNC("floor",		__jpfloor,	-1,	0); } 
+	else if(strcmp(fname,"ceil") == 0) 		{ result = JPATHFUNC("ceil",		__jpceil,	-1,	0); } 
+	else if(strcmp(fname,"round") == 0) 	{ result = JPATHFUNC("round",		__jpround,	-1,	0); } 
+	else if(strcmp(fname,"rand") == 0) 		{ result = JPATHFUNC("rand",		__jprand,	-1,	0); } 
 
+
+	else if(strcmp(fname,"upper") == 0) 	{ result = JPATHFUNC("upper",		__jpupper,	1,		0); } 
+	else if(strcmp(fname,"lower") == 0) 	{ result = JPATHFUNC("lower",		__jplower,	1,		0); } 
+
+	else if(strcmp(fname,"if") == 0) 		{ result = JPATHFUNC("if",			__jpif,		1,		0); } 
+
+	else if(strcmp(fname,"eq") == 0) 		{ result = JPATHFUNC("eq",			__jpeq,		2,		0); } 
+	else if(strcmp(fname,"neq") == 0) 		{ result = JPATHFUNC("neq",		__jpneq,		2,		0); } 
+	else if(strcmp(fname,"gt") == 0) 		{ result = JPATHFUNC("gt",			__jpgt,		2,		0); } 
+	else if(strcmp(fname,"lt") == 0) 		{ result = JPATHFUNC("lt",			__jplt,		2,		0); } 
+	else if(strcmp(fname,"gte") == 0) 		{ result = JPATHFUNC("gte",		__jpgte,		2,		0); } 
+	else if(strcmp(fname,"lte") == 0) 		{ result = JPATHFUNC("lte",		__jplte,		2,		0); } 
+
+	else if(strcmp(fname,"concat") == 0) 	{ result = JPATHFUNC("concat",	__jpconcat,	-1,	0); } 
+
+	else if(strcmp(fname,"substr") == 0) 	{ result = JPATHFUNC("substr",	__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"match") == 0) 	{ result = JPATHFUNC("match",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"indexof") == 0) 	{ result = JPATHFUNC("indexof",	__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"rsub") == 0) 		{ result = JPATHFUNC("rsub",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"stringf") == 0) 	{ result = JPATHFUNC("stringf",	__jpnoop,	-1,	0); } 
+
+	else if(strcmp(fname,"key") == 0) 		{ result = JPATHFUNC("key",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"value") == 0) 	{ result = JPATHFUNC("value",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"group") == 0) 	{ result = JPATHFUNC("group",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"sort") == 0) 		{ result = JPATHFUNC("sort",		__jpnoop,	-1,	1); } 
+
+	else { 
+		result = JPATHFUNC("UDF",__jpudf,-1,0); 
+		result->data = jsonCreateString(NULL,fname); 
+	} 
 	return result;
 }
 
@@ -1308,8 +1262,8 @@ TRACE("");
 	return result;
 }
 
-int jpatherror(const char*msg) {
- fprintf(stderr,"error at %d: %s\n",jpathcolumn,(msg)) ;
+int jpatherror(JpathNode**p,const char*msg) {
+ fprintf(stderr,"!!!!error at %d: %s\n",jpathcolumn,(msg)) ;
 }
 
 int plistSize(JpathNode**jpn) {

@@ -73,11 +73,13 @@ extern int jpathcolumn;
 [.] { return '.'; }
 
 null { return NULLV; }
+ /*
 object { return OBJECT; }
 array { return ARRAY; }
 scalar { return SCALAR; }
 number { return NUMBER; }
 text { return TEXT; }
+ */
 
 
 [-+*%=()[\]] { return *yytext; }
@@ -88,6 +90,7 @@ div  { return DIV; }
 [>][=] { return GTE; }
 [!][=] { return NE; }
 
+   /*
 sqrt { return SQRT; }
 pow { return POW; }
 sin { return SIN; }
@@ -106,9 +109,9 @@ uniq { return UNIQ; }
 
 key { return QKEY; }
 value { return VALUE; } 
- /*
+ 
 name { return NAME; } 
-	*/
+	
 avg { return AVG; }
 min { return MIN; }
 max { return MAX; }
@@ -131,6 +134,7 @@ lt { return LT; }
 gte { return GTES; }
 lte { return LTES; }
 
+   */
 [-+]?[0-9]+ { 
 		jpathlval.ival = atol(yytext);
 		return INTEGER; 

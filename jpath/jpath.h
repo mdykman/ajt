@@ -42,9 +42,10 @@ JpathNode* functionFactory(const char*fname) ;
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data, int nargs, int ag, JpathNode *next) ;
 JpathNode* parseJpath(const char *s);
 
-JsonNodeSet * __jpnoop		(JsonNodeSet *ctx, JpathNode *p) ;
-JsonNodeSet * __jpevaldata	(JsonNodeSet *ctx, JpathNode *p) ;
-JsonNodeSet * __jpparent	(JsonNodeSet *ctx, JpathNode *p) ;
+JsonNodeSet * __jpnoop		(JsonNodeSet *ctx, JpathNode *p);
+JsonNodeSet * __jpevaldata	(JsonNodeSet *ctx, JpathNode *p);
+JsonNodeSet * __jpparent	(JsonNodeSet *ctx, JpathNode *p);
+JsonNodeSet * __jptopparent(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jppeach		(JsonNodeSet *ctx, JpathNode *p) ;
 JsonNodeSet * __jpeach		(JsonNodeSet *ctx, JpathNode *p) ;
 JsonNodeSet * __jpeachdeep	(JsonNodeSet *ctx, JpathNode *p) ;
@@ -94,6 +95,8 @@ JsonNodeSet * __jpnametest	(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpudf(JsonNodeSet *ctx, JpathNode *p);
 
 JsonNodeSet*__jpcompare	(JsonNodeSet *ctx,JpathNode *jn,int(cmpop)(int)) ;
+
+JsonNodeSet * __jpunion(JsonNodeSet *ctx, JpathNode *p) ; 
 
 JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
 JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
