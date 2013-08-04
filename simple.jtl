@@ -6,5 +6,6 @@
 	saltot: jpath("emps/salary/sum()"),
 	most: jpath("emps/salary/max()"),
 	least: jpath("emps/salary/min()"),
-	avg: jpath("emps/salary/avg()")
+	avg: jpath("emps/salary/avg()"),
+	departments: jpath("emps/group(dept)"),
 }

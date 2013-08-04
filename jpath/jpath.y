@@ -1152,7 +1152,7 @@ JpathNode* functionFactory(const char*fname) {
 
 	else if(strcmp(fname,"key") == 0) 		{ result = JPATHFUNC("key",		__jpnoop,	-1,	1); } 
 	else if(strcmp(fname,"value") == 0) 	{ result = JPATHFUNC("value",		__jpnoop,	-1,	1); } 
-	else if(strcmp(fname,"group") == 0) 	{ result = JPATHFUNC("group",		__jpnoop,	-1,	1); } 
+	else if(strcmp(fname,"group") == 0) 	{ result = JPATHFUNC("group",		__jpgroup,	1,	1); } 
 	else if(strcmp(fname,"sort") == 0) 		{ result = JPATHFUNC("sort",		__jpnoop,	-1,	1); } 
 
 	else { 
@@ -1160,6 +1160,146 @@ JpathNode* functionFactory(const char*fname) {
 		result->data = jsonCreateString(NULL,fname); 
 	} 
 	return result;
+}
+
+#define JPINITCAPACITY 100
+
+
+int __compareJsonNodes(JsonNode*a,JsonNode*b) {
+	if(a==b) return 0;
+	if(a==NULL) return 1;
+	if(b==NULL) return -1;
+
+	if(a->type != b->type) return a->type-b->type < 0 ? -1 : a->type-b->type > 0 ? 1 : 0;
+	switch(a->type) {
+		case TYPE_STRING: {
+			if(a->str == NULL && b->str == NULL) return 0;
+			if(a->str==NULL) return 1;
+			if(b->str==NULL) return -1;
+			return strcmp(a->str,b->str);
+		}
+		case TYPE_NUMBER: {
+			if(isnan(a->fval)) return 1;
+			if(isnan(b->fval)) return -1;
+			return a->fval == b->fval ? 0 : a->fval - b->fval < 0 ? -1 : 1;
+		}
+		case TYPE_ELEMENT: {
+			int r = strcmp(a->str,b->str);
+			if(r == 0) return compareJsonNodes(a->first,b->first);
+			else return r;
+		}
+		case TYPE_OBJECT: 
+		case TYPE_ARRAY: {
+			if(a->children > b->children) return -1;
+			if(a->children < b->children) return 1;
+			JsonNode*ait = a->first;
+			JsonNode*bit = b->first;
+			while(ait != NULL && bit != NULL) {
+				int r = compareJsonNodes(ait,bit);
+				if(r!=0) return r;
+				ait=ait->next;
+				bit=bit->next;
+			}
+			if(ait == NULL && bit == NULL) return 0;
+			if(ait == NULL) return 1;
+			if(bit == NULL) return -1;
+			return 0;
+		}
+		default: fprintf(stderr,"bad type found in node compare: %d\n",a->type);
+
+	}
+	// should never hit this
+	return 0;
+}
+
+int compareJsonNodes(JsonNode*a,JsonNode*b) {
+	int __n = __compareJsonNodes(a,b);
+	fprintf(stderr,"compareNodes returns %d\n",__n);
+	return __n;
+}
+
+typedef struct __jpgrouplist {
+	JsonNodeSet *keys;
+	JsonNode *arrays;
+} jpgrouplist;
+
+void freeGroupList(jpgrouplist*gl) {
+	int i;
+	for(i=0;i<gl->keys->count;++i) {
+		freeJsonNode(gl->keys->nodes[i]);
+	}
+	freeJsonNodeSet(gl->keys);
+	// arrays is NOT detroyed as it is the product of the the process
+	JPATHFREE(gl);
+}
+jpgrouplist *newGroupList() {
+	jpgrouplist * gl= (jpgrouplist*)JPATHALLOC(sizeof(jpgrouplist));
+	gl->keys = newJsonNodeSet();
+	gl->arrays = jsonCreateArray(NULL);
+
+	return gl;
+}
+
+int addToGroup(jpgrouplist *gl,JsonNode *expr, JsonNode *item) {
+	int i = 0;
+	JsonNode *rrs = gl->arrays->first;
+	item = jsonCloneNode(item);
+	for(i=0;i<gl->keys->count;++i) {
+TRACE("ATG before compare");
+		if(compareJsonNodes(gl->keys->nodes[i],expr) == 0) {
+TRACE("ATG reuse");
+			jsonArrayAppend(rrs,item);
+jsonPrintToFile(stderr,gl->arrays,JSONPRINT_PRETTY);
+			return 0;
+		}
+		rrs = rrs->next;
+	}
+
+TRACE("ATG create new slot");
+TRACE("ATG key");
+jsonPrintToFile(stderr,expr,JSONPRINT_PRETTY);
+TRACE("ATG item");
+jsonPrintToFile(stderr,item,JSONPRINT_PRETTY);
+	addJsonNode(gl->keys,expr);
+	JsonNode *arr = jsonCreateArray(gl->arrays);
+TRACE("ATG new arr array");
+jsonPrintToFile(stderr,arr,JSONPRINT_PRETTY);
+	jsonArrayAppend(arr,item);
+TRACE("ATG new element");
+jsonPrintToFile(stderr,arr,JSONPRINT_PRETTY);
+//	jsonArrayAppend(gl->arrays,arr);
+TRACE("ATG result");
+jsonPrintToFile(stderr,gl->arrays,JSONPRINT_PRETTY);
+	return 1;
+}
+
+JsonNodeSet *__jpgroup(JsonNodeSet *ctx, JpathNode*p) {
+	JSONTESTPARAMS(p,1);
+	jpgrouplist* gl = newGroupList();
+
+	JpathNode *p1=jsonGetJpathParam(p,0);
+	int i;
+	TRACE("jpgroup");
+	for(i=0;i<ctx->count;++i) {
+		if(ctx->nodes[i]->type == TYPE_ARRAY) {
+			JsonNode*it = ctx->nodes[i]->first;
+			while(it!=NULL) {
+TRACE("jpgroup loop");
+				JsonNode *test = jpathExecute(it,p1);
+				if(addToGroup(gl,test,it) == 0) {
+					freeJsonNode(test);
+				}
+				it=it->next;
+			}
+		}
+	}
+	TRACE("jpgrouping complete");
+
+	JsonNodeSet *rjns= newJsonNodeSet();
+	addJsonNode(rjns,gl->arrays);
+	freeGroupList(gl);
+	TRACE("end jpgroup");
+	return rjns;
 }
 
 JsonNodeSet *__jpfunc(JsonNodeSet *ctx, JpathNode*p) {

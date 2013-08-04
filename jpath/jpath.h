@@ -46,7 +46,9 @@ typedef JsonNodeSet* (*jpathproc)(JsonNodeSet*context,struct JpathNode *array);
 
 int plistSize(JpathNode**);
 
-JpathNode* functionFactory(const char*fname) ;
+JpathNode* functionFactory(const char*fname);
+
+int compareJsonNodes(JsonNode*a,JsonNode*b);
 
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data, int nargs, int ag, JpathNode *next) ;
 JpathNode* parseJpath(const char *s);
@@ -106,6 +108,7 @@ JsonNodeSet * __jpudf(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet*__jpcompare	(JsonNodeSet *ctx,JpathNode *jn,int(cmpop)(int)) ;
 
 JsonNodeSet * __jpunion(JsonNodeSet *ctx, JpathNode *p) ; 
+JsonNodeSet * __jpgroup(JsonNodeSet *ctx, JpathNode *p) ; 
 
 JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
 JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
