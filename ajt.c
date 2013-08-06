@@ -233,7 +233,6 @@ void showJsonNode(JsonNode*jn) {
 	}
 }
 
-
 int main(int argc, char *argv[])
 {
     int minify=0; 
@@ -251,7 +250,6 @@ int main(int argc, char *argv[])
     tfnd = 0;
 	 jsoutput = stdout;
     while ((opt = getopt(argc, argv, "j:btmpqdo:")) != -1) {
-//	 	printf("\t\t\tprocessing %c\n",opt);
         switch (opt) {
 	        case 'm':
             minify = 1;
@@ -402,10 +400,33 @@ int addNodeToParent(JsonNode*p,JsonNode*c) {
 	@param, output node to parent
 
  */
+JsonNode *jtlReadFile(JsonNode *paths) {
+	JsonNode * jsontree = NULL;
+	switch(paths->type) {
+		case TYPE_STRING: {
+			FILE *inp = fopen(paths->str,"r");
+			jsontree = jsonBuildJsonTreeFromFile(inp);
+			fclose(inp);
+		}
+		break;
+		case TYPE_ARRAY: {
+			JsonNode *it = paths->first;
+			jsontree = jsonCreateArray(NULL);
+			while(it != NULL) {
+				JsonNode *res = jtlReadFile(it);
+				appendJsonNode(jsontree,res);
+				it = it->next;
+			}
+		}
+		break;
+	}
+	return jsontree;
+}
+
 JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 	JsonNode*result = NULL;
 	JsonNode*it;
-//	showJsonNode(jtl);
+	char buf[1024];
 	if(jtl!=NULL) switch(jtl->type) {
 		case TYPE_FUNC:
 			if(strcmp(jtl->str,"jpath") == 0) {
@@ -416,13 +437,15 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 				result = jpathExecute(context,p);
 				freeJsonNode(context);
 				appendJsonNode(parent,result);
-			} else if(strcmp(jtl->str,"files") == 0) {
-				if(jtl->first == NULL) return NULL;
-//					JsonNode *files = jsonParseFiles(jtl->first->str);
+			} else if(strcmp(jtl->str,"file") == 0) {
+				result = jtlReadFile(jtl->first);
+				appendJsonNode(parent,result);
 			} else {
 				JsonNode*udf = jsonGetMember(engine->reference,jtl->str);
 				if(udf == NULL) {
-					fprintf(stderr,"UDF '%s' not found; ignoring\n",jtl->str);
+					sprintf(buf,"!!UDF '%s' not found; ignoring!!\n",jtl->str);
+					result = jsonCreateString(parent,strdup(buf));
+					fprintf(stderr,"%s",buf);
 				} else {
 					jtlTraverse(engine,udf,context,parent);
 				}
@@ -454,14 +477,18 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 		case TYPE_NUMBER:
 			result = jsonCreateNumber(parent,jtl->ival,jtl->fval);
 		break;
-		default: TRACE("unknown type");
+		default: {
+			sprintf(buf,"unknown type in traverse: %d\n",jtl->type);
+			result = jsonCreateString(parent,strdup(buf));
+			fprintf(stderr,"%s",buf);
+		}
 
 	}
 	return result;
 }
 JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
-	JtlEngine engine;
-	engine.reference = jtl;
+	JtlEngine engine = { jtl };
+//	engine.reference = jtl;
 	JsonNode *ex = jsonGetMember(jtl,"jtldefault");
 	if(ex == NULL) {
 		ex = jtl;
