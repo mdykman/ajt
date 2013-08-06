@@ -7,7 +7,18 @@
 #define DEFAULT_FLOAT_FORMAT "%.6f"
 
 
+#define JSONPRINT_MINIFY  0
+#define JSONPRINT_PRETTY  1
+#define JSONPRINT_SQUOTE  2
+#define JSONPRINT_TABFILL 4
+
+#ifdef DEBUG
 #define TRACE(x) fprintf(stderr,"%s:%d - %s\n",__FILE__,__LINE__,(x))
+#define TRACEJSON(x) jsonPrintToFile(stderr,x,JSONPRINT_PRETTY)
+#else
+#define TRACE(x) 
+#define TRACEJSON(x) 
+#endif
 
 
 #define JSONALLOC(x) malloc(x)
@@ -55,11 +66,6 @@ typedef const enum {
 
 
 
-#define JSONPRINT_MINIFY  0
-#define JSONPRINT_PRETTY  1
-#define JSONPRINT_SQUOTE  2
-#define JSONPRINT_TABFILL 4
-
 typedef enum  {
 	TYPE_JSONP,
 	TYPE_OBJECT,
@@ -87,8 +93,11 @@ typedef struct __JsonNode {
 	double fval;
 } JsonNode;
 
-// extern jax_callbacks jcb;
-// extern const jax_callbacks single_callback;
+typedef struct __JtlEngine {
+	JsonNode * reference;
+} JtlEngine;
+
+
 #define appendJsonNode(p,c)         { \
             if((p)->last == NULL) {       \
                (p)->first = (p)->last = (c);       \

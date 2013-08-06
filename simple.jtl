@@ -1,11 +1,15 @@
 {
-	count : jpath("emps/size()"),
-	cc : jpath("size(emps)"),
-	names: jpath("emps/name"),
-	salaries: jpath("emps/salary"),
-	saltot: jpath("emps/salary/sum()"),
-	most: jpath("emps/salary/max()"),
-	least: jpath("emps/salary/min()"),
-	avg: jpath("emps/salary/avg()"),
-	departments: jpath("emps/group(dept)"),
+	employees: {
+		number : jpath("size(emps)"),
+		names: jpath("emps/name"),
+		top: jpath("emps/if(salary/.>avg())")
+	},
+	salaries: { 
+		all: jpath("emps/salary"),
+		tot: jpath("emps/salary/sum()"),
+		highest: jpath("emps/salary/max()"),
+		lowest: jpath("emps/salary/min()"),
+		avg: jpath("emps/salary/avg()")
+	},
+	departments: jpath("emps/group(dept)")
 }

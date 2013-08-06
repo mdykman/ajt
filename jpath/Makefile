@@ -1,5 +1,5 @@
 
-#CFLAGS=-std=c99
+CFLAGS=-DDEBUG
 
 all : jpath.y.o jpath.l.o
 

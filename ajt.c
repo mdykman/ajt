@@ -402,7 +402,7 @@ int addNodeToParent(JsonNode*p,JsonNode*c) {
 	@param, output node to parent
 
  */
-JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
+JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 	JsonNode*result = NULL;
 	JsonNode*it;
 //	showJsonNode(jtl);
@@ -411,15 +411,28 @@ JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 			if(strcmp(jtl->str,"jpath") == 0) {
 				if(jtl->first == NULL) return NULL;
 				JpathNode *p =parseJpath(jtl->first->str);
+				// make sure the source context is never distrurbed
+				context = jsonCloneNode(context);
 				result = jpathExecute(context,p);
+				freeJsonNode(context);
 				appendJsonNode(parent,result);
+			} else if(strcmp(jtl->str,"files") == 0) {
+				if(jtl->first == NULL) return NULL;
+//					JsonNode *files = jsonParseFiles(jtl->first->str);
+			} else {
+				JsonNode*udf = jsonGetMember(engine->reference,jtl->str);
+				if(udf == NULL) {
+					fprintf(stderr,"UDF '%s' not found; ignoring\n",jtl->str);
+				} else {
+					jtlTraverse(engine,udf,context,parent);
+				}
 			}
 		break;
 		case TYPE_ARRAY:
 			result = jsonCreateArray(parent);
 			it = jtl->first;
 			while(it != NULL) {
-				jtlTraverse(it,context,result);
+				jtlTraverse(engine,it,context,result);
 				it = it->next;
 			}
 		break;
@@ -427,13 +440,13 @@ JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 			result = jsonCreateObject(parent);
 			it = jtl->first;
 			while(it != NULL) {
-				jtlTraverse(it,context,result);
+				jtlTraverse(engine,it,context,result);
 				it = it->next;
 			}
 		break;
 		case TYPE_ELEMENT:
 			result = jsonCreateElement(parent,jtl->str);
-			jtlTraverse(jtl->first,context,result);
+			jtlTraverse(engine,jtl->first,context,result);
 		break;
 		case TYPE_STRING:
 			result = jsonCreateString(parent,jtl->str);
@@ -447,7 +460,16 @@ JsonNode *jtlTraverse(JsonNode *jtl,JsonNode* context,JsonNode*parent) {
 	return result;
 }
 JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
-	JsonNode *result = jtlTraverse(jtl,json,NULL);
+	JtlEngine engine;
+	engine.reference = jtl;
+	JsonNode *ex = jsonGetMember(jtl,"jtldefault");
+	if(ex == NULL) {
+		ex = jtl;
+	} else {
+// seed engine with init constants
+		JsonNode *init=jsonGetMember(jtl,"jtlinit");
+	}
+	JsonNode *result = jtlTraverse(&engine,ex,json,NULL);
 	return result;
 }
 

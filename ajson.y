@@ -677,7 +677,7 @@ JsonNode* jsonNewNode(JsonNode* parent,jsonnodetype t,const char* str, long ival
 		case TYPE_ELEMENT:
 		case TYPE_STRING:
 		case TYPE_FUNC:
-			p->str = strdup(str);
+			p->str = str == NULL ? NULL : strdup(str);
 		break;
 		case TYPE_NUMBER:
 			p->ival = ival;
@@ -700,7 +700,10 @@ JsonNode* jsonNewNode(JsonNode* parent,jsonnodetype t,const char* str, long ival
 }
 
 JsonNode* jsonCreateNull(JsonNode*p) {
-	return jsonNewNode(p,TYPE_STRING,NULL,0L,NAN);
+	TRACE("");
+	JsonNode *n = jsonNewNode(p,TYPE_STRING,NULL,0L,NAN);
+	TRACE("");
+	return n;
 }
 JsonNode* jsonCreateFunc(JsonNode*p,const char*str) {
 	return jsonNewNode(p,TYPE_FUNC,strdup(str),0L,NAN);
@@ -1031,19 +1034,23 @@ int jsonPrintIndent(FILE *f,int n, const char*fill) {
 
 int jsonPrintString(FILE*f,const char*str,int sq) {
 	int oc = 0;
-	if(sq) oc+= fprintf(f,"'");
-	else oc+= fprintf(f,"\"");
-	while(*str != '\x0') {
-		switch(*str) {
-			case '\n' : oc+=fprintf(f,"\\n"); break;
-			case '\r' : oc+=fprintf(f,"\\r"); break;
-			case '\t' : oc+=fprintf(f,"\t"); break;
-			default	: oc+=fprintf(f,"%c",*str); break;
+	if(str == NULL) {
+		oc+=fprintf(f,"null");
+	} else {
+		if(sq) oc+= fprintf(f,"'");
+		else oc+= fprintf(f,"\"");
+		while(*str != '\x0') {
+			switch(*str) {
+				case '\n' : oc+=fprintf(f,"\\n"); break;
+				case '\r' : oc+=fprintf(f,"\\r"); break;
+				case '\t' : oc+=fprintf(f,"\t"); break;
+				default	: oc+=fprintf(f,"%c",*str); break;
+			}
+			++str;
 		}
-		++str;
+		if(sq) oc+= fprintf(f,"'");
+		else oc+= fprintf(f,"\"");
 	}
-	if(sq) oc+= fprintf(f,"'");
-	else oc+= fprintf(f,"\"");
 	return oc;
 }
 

@@ -82,7 +82,6 @@ text { return TEXT; }
  */
 
 
-[-+*%=()[\]] { return *yytext; }
 div  { return DIV; }
 
 
@@ -90,6 +89,7 @@ div  { return DIV; }
 [>][=] { return GTE; }
 [!][=] { return NE; }
 
+[-+*%=()[\]><] { return *yytext; }
    /*
 sqrt { return SQRT; }
 pow { return POW; }
