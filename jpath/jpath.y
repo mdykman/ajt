@@ -14,10 +14,6 @@
 // **/email/count()
 
 
-#define JPATHREALLOC(x,y)  realloc(x,y)
-#define JPATHALLOC(x)  malloc(x)
-#define JPATHFREE(x)  free(x)
-
 #define JPATHERROR(x) jpatherror(x)
 #define JPATHWARNING(x)  fprintf(stderr,"warning at %d: %s\n",jpathcolumn,(x)) 
 
@@ -56,7 +52,6 @@
 
 int jpathcolumn = 0;
 
-
 %}
 
 %code requires {
@@ -78,21 +73,14 @@ int jpathcolumn = 0;
 
 %type<str> chars dstr sstr string label 
 
-%type<jp> func
-%type<jp> fstep bstep step
-
-
-
+%type<jp> func fstep bstep step fcall const
 %type<jp> relpath cmpexp orexp mathexp pexp
 %type<jp> pathstep test nametest kindtest ttop  jpath abspath mathop cmpop
 
-
 %type<plist> plist
 
-%type<jp> fcall
 
-%type<jp> const
-
+%token JPAND JPOR
 %token<str> LABEL CHAR  
 %token<fval> FLOAT 
 %token<ival> INTEGER
@@ -346,6 +334,13 @@ void freeJsonNodeSet(JsonNodeSet *js) {
 	JPATHFREE(js);
 }
 
+
+void jsonPopulateArray(JsonNode*array, JsonNodeSet *ns) {
+	int i;
+	for(i=0;i<ns->count;++i) {
+		jsonArrayAppend(array,jsonCloneNode(ns->nodes[i]));
+	}
+}
 void addJsonNode(JsonNodeSet*jns,JsonNode*node) {
 	// ignore duplicates
 	int i;
@@ -406,22 +401,10 @@ JsonNodeSet *evalParam(JsonNodeSet *ctx,JpathNode *p,int n) {
 	return NULL;
 }
 
-/*
-JsonNodeSet *__jpdyadic(JsonNodeSet*ctx,JpathNode *p) {
-	JSONTESTPARAMS(jn,3);
-	JpathNode *pri = jsonGetJpathParam(p,0);
-	JpathNode *lhn = jsonGetJpathParam(p,1);
-	JpathNode *rhn = jsonGetJpathParam(p,2);
-
-	JsonNodeSet* lhs = __jpathExecute(ctx,lhs);
-	JsonNodeSet* rhs = __jpathExecute(ctx,rhs);
-}
-*/
 JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode *p) {
 	JpathNode *p1 = jsonGetJpathParam(p,0);
 	if(p1!=NULL) {
 		JsonNodeSet*ctx2=__jpathExecute(ctx,p1);
-//		freeJsonNodeSet(ctx);
 		ctx=ctx2;
 	}
 	return ctx;
@@ -456,7 +439,7 @@ JsonNodeSet *tempContext(JsonNodeSet*ctx,JpathNode *p) {
 				}												\
 			}				\
 		} 					\
-	}						\
+	}
 	
 int jsonTestBoolean(JsonNodeSet*test) {
 	int result	;
@@ -559,6 +542,39 @@ JsonNodeSet *__jpnumbertest(JsonNodeSet *ctx,JpathNode *jn) {
 
 JsonNodeSet *__jpscalartest(JsonNodeSet *ctx,JpathNode *jn) {
 	return __monadic(ctx,jn,__scalartype);
+}
+
+/*
+JsonNodeSet *__jpselect(JsonNodeSet *ctx,JpathNode *jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i;
+	JsonNode* sel = jsonCreateArray(NULL);
+	JpathNode **params = jn->params;
+	while(*params) {
+		JsonNode*pr = jPathExecute(ctx,*params);
+		jsonArrayAppend(sel,jsonCloneNode(pr));
+		++params;
+	}
+
+	for(i=0;i<ctx->count;++i) {
+		if(ctx->nodes[i]-> type == TYPE_OBJECT) {
+			JsonNode *it = ctx->nodes[i]->first;
+			while(it) {
+				it = it->next;
+			}
+		}
+	}
+}
+*/
+
+JsonNodeSet *__jpnot(JsonNodeSet *ctx,JpathNode *jn) {
+	JsonNodeSet *rjns = newJsonNodeSet();
+	int i;
+	for(i=0;i<ctx->count;++i) {
+		int test = jsonTestBooleanNode(ctx->nodes[i]) == 0 ? 1 : 0;
+		addJsonNode(rjns,jsonCreateNumber(NULL,test,test));
+	}
+	return rjns;
 }
 
 JsonNodeSet *__jpnametest(JsonNodeSet *ctx,JpathNode *jn) {
@@ -1084,8 +1100,28 @@ TRACE("");
 	TRACEJSON(context->nodes[i]);
 
 
-
-		total = choose(context->nodes[i]->fval,total);
+		if(context->nodes[i]->type == ARRAY) {
+TRACE("limiting arrays");
+			JsonNode *arr = jsonCreateArray(NULL);
+			JsonNode *it = context->nodes[i]->first;
+			JsonNodeSet *pps = newJsonNodeSet();
+			JsonNode*dummy = jsonCreateNull(NULL);
+			addJsonNode(pps,dummy);
+			while(it) {
+				pps->nodes[0] = it;
+				JsonNodeSet *ir = __jplimit(pps,p,choose,acc);
+//				addJsonNodeSet(ns,ir);
+				jsonPopulateArray(arr,ir);
+				freeJsonNodeSet(ir);
+				it = it->next;
+			}
+			pps->nodes[0] = dummy;
+			freeJsonNodeSet(pps);
+			addJsonNode(ns,arr);
+		} else {
+TRACE("limiting singles");
+				total = choose(context->nodes[i]->fval,total);
+		}
 		fprintf(stderr,"choosing from %f, total is %f\n",context->nodes[i]->fval,total);
 			/*
 		if(context->nodes[i]->type == ARRAY) {
@@ -1422,14 +1458,17 @@ TRACE("context");
 TRACEJSON(ctx->nodes[i]);
 				if(ctx->nodes[i]->type == TYPE_ARRAY) {
 TRACE("array");
+//					JsonNode *arr = jsonCreateArray(NULL);
 					JsonNode*el = ctx->nodes[i]->first;
 					while(el) {
 						params->nodes[0] = el;
 						JsonNodeSet *ir = jn->proc(params,jn);
+//						jsonPopulateArray(arr,ir);
 						addJsonNodeSet(rjns,ir);
 						freeJsonNodeSet(ir);
 						el = el->next;
 					}
+//					addJsonNode(rjns,arr);
 				} else {
 TRACE("object or scalar");
 					params->nodes[0] = ctx->nodes[i];

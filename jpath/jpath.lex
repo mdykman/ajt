@@ -1,6 +1,5 @@
 %{
 
-
 extern int jpathcolumn;
 
 #include <unistd.h>
@@ -24,7 +23,7 @@ extern int jpathcolumn;
 %%
 
 <STRING>[^"\\]+ {
-      jpathlval.str = strdup(yytext);
+      jpathlval.str = JPATHSTRDUP(yytext);
       return CHAR;
    }
 
@@ -40,7 +39,7 @@ extern int jpathcolumn;
 
 
 <SSTRING>[^'\\]+ {
-      jpathlval.str = strdup(yytext);
+      jpathlval.str = JPATHSTRDUP(yytext);
       return CHAR;
    }
 
@@ -64,6 +63,10 @@ extern int jpathcolumn;
       return '\'';
    }
 
+	/* eat whitespace */
+[ \t]+	{}
+
+	
 [*][*] { return DSTAR; }
 [*]	{ return '*'; } 
 [/]   { return '/'; }
@@ -72,7 +75,6 @@ extern int jpathcolumn;
 [.][.] { return DDOT; }
 [.] { return '.'; }
 
-null { return NULLV; }
  /*
 object { return OBJECT; }
 array { return ARRAY; }
@@ -82,59 +84,16 @@ text { return TEXT; }
  */
 
 
+false	{ jpathlval.ival = 0; return INTEGER; }
+true	{ jpathlval.ival = 1; return INTEGER; }
+
+
+null { return NULLV; }
 div  { return DIV; }
+and  { return JPAND; }
+or   { return JPOR; }
 
 
-[<][=] { return LTE; }
-[>][=] { return GTE; }
-[!][=] { return NE; }
-
-[-+*%=()[\]><] { return *yytext; }
-   /*
-sqrt { return SQRT; }
-pow { return POW; }
-sin { return SIN; }
-cos { return COS; }
-log { return LOG; }
-floor { return FLOOR; }
-ciel { return CEIL; }
-round { return ROUND; }
-rand { return RAND; }
-
-
-group { return GROUP; }
-if { return IF; }
-sort { return SORT; }
-uniq { return UNIQ; }
-
-key { return QKEY; }
-value { return VALUE; } 
- 
-name { return NAME; } 
-	
-avg { return AVG; }
-min { return MIN; }
-max { return MAX; }
-size { return SIZE; }
-sum { return SUM; }
-
-string { return STRING; }
-concat { return CONCAT; }
-upper { return UPPER; }
-lower { return LOWER; }
-indexof { return INDEXOF; }
-substr { return SUBSTR; }
-match { return MATCH; }
-rsub { return RSUB; }
-
-eq { return EQ; }
-neq { return NEQ; }
-gt { return GT; }
-lt { return LT; }
-gte { return GTES; }
-lte { return LTES; }
-
-   */
 [-+]?[0-9]+ { 
 		jpathlval.ival = atol(yytext);
 		return INTEGER; 
@@ -145,17 +104,25 @@ lte { return LTES; }
 		return FLOAT; 
 	}
 
-[$a-zA-Z_][$a-zA-Z0-9_-]+      { 
-	jpathlval.str = strdup(yytext);
+[a-zA-Z_][a-zA-Z0-9_.-]+      { 
+	jpathlval.str = JPATHSTRDUP(yytext);
 	return LABEL; 
 	}
 
-. { // matches garbage
-	yyterminate();
-}
+[<][=] { return LTE; }
+[>][=] { return GTE; }
+[!][=] { return NE; }
 
+[!-+*%=()[\]><] { return *yytext; }
+
+    /*
 [\n] { 
    //	I should never see one of these
+}
+    */
+
+. { // matches garbage
+	yyterminate();
 }
 
 %%

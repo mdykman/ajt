@@ -25,33 +25,6 @@ int yycolumn = 0;
     /* comment text */
 <COMMENT>[^*]+ {  }
 
-<STRING>[^"\n\r\\]+ { 
-		jsonlval.str = strdup(yytext);
-		return CHAR;
-   }
-
-     /* any line ending */
-<SSTRING,STRING>"\r\n"|[\r]|[\n] {
-	if(jsonParserAllowErrors) {
-		yywarning("unterminated string");
-		BEGIN INITIAL; 
-		return '\"';
-	} else {
-		jsonerror("unterminated string");
-		return BADTOKEN;
-	}
-}
-<STRING>"\\".  {
-		pEsc(&jsonlval.str,yytext);
-		return CHAR;
-	}
-
-<STRING>["]  { 
-		BEGIN INITIAL; 
-		return '\"';
-	}
-
-
 <SSTRING>[^'\\]+ {  
 		jsonlval.str = strdup(yytext);
 		return CHAR;
@@ -66,6 +39,47 @@ int yycolumn = 0;
 		BEGIN INITIAL; 
 		return '\'';
 	}
+
+<SSTRING>"\r\n"|[\r]|[\n] {
+	if(jsonParserAllowErrors) {
+		yywarning("unterminated string");
+		BEGIN INITIAL; 
+		return '\'';
+	} else {
+		jsonerror("unterminated string");
+		return BADTOKEN;
+	}
+}
+
+<STRING>[^"\n\r\\]+ { 
+		jsonlval.str = strdup(yytext);
+		return CHAR;
+   }
+
+     /* any line ending */
+<STRING>"\r\n"|[\r]|[\n] {
+	if(jsonParserAllowErrors) {
+		yywarning("unterminated string");
+		yycolumn = 0;
+		BEGIN INITIAL; 
+		return '\"';
+	} else {
+		jsonerror("unterminated string");
+		yycolumn = 0;
+		return BADTOKEN;
+	}
+}
+
+<STRING>"\\".  {
+		pEsc(&jsonlval.str,yytext);
+		return CHAR;
+	}
+
+<STRING>["]  { 
+		BEGIN INITIAL; 
+		return '\"';
+	}
+
 
 ["]  	{ 
 		BEGIN STRING; 

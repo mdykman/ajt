@@ -5,6 +5,11 @@
 
 #define JSONNODESETINT 1024;
 
+#define JPATHREALLOC(x,y)  realloc(x,y)
+#define JPATHALLOC(x)  malloc(x)
+#define JPATHFREE(x)  free(x)
+#define JPATHSTRDUP(x)  strdup(x)
+
 typedef struct __JsonNodeSet {
 	JsonNode ** nodes;
 	int count;

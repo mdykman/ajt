@@ -13,13 +13,11 @@ GENERATED_FILES=	\
 	ajt.o \
 	ajt 
 	
-all:  
-	$(MAKE) jpath
-	$(MAKE) fullset
+all: jpath ajt 
 
 jpath: jpath/jpath.l.o jpath/jpath.y.o
 
-jpath/jpath.l.o jpath/jpath.y.o : 
+jpath/jpath.l.o jpath/jpath.y.o : jpath/jpath.y jpath/jpath.lex
 	cd jpath && $(MAKE) all
 
 fullset: ajt 
