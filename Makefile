@@ -20,7 +20,7 @@ jpath: jpath/jpath.l.o jpath/jpath.y.o
 jpath/jpath.l.o jpath/jpath.y.o : jpath/jpath.y jpath/jpath.lex
 	cd jpath && $(MAKE) all
 
-fullset: ajt 
+# fullset: ajt 
 
 clean:
 	cd jpath && $(MAKE) clean
@@ -32,7 +32,7 @@ libajt.a	: ajson.l.o ajson.y.c
 libajt.so	: ajson.l.o ajson.y.c
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
 
-ajt : ajson.y.o ajson.l.o ajt.o 
+ajt : ajson.y.o ajson.l.o ajt.o  jpath/jpath.l.o jpath/jpath.y.o
 	${CC} ajson.y.o ajson.l.o ajt.o jpath/jpath.l.o jpath/jpath.y.o -lm -o ajt
 
 ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex
