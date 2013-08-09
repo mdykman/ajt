@@ -1193,6 +1193,7 @@ JpathNode* functionFactory(const char*fname) {
 	else if(strcmp(fname,"lower") == 0) 	{ result = JPATHFUNC("lower",		__jplower,	1,		0); } 
 
 	else if(strcmp(fname,"if") == 0) 		{ result = JPATHFUNC("if",			__jpif,		1,		1); } 
+	else if(strcmp(fname,"group") == 0) 	{ result = JPATHFUNC("group",		__jpgroup,	1,	1); } 
 
 	else if(strcmp(fname,"eq") == 0) 		{ result = JPATHFUNC("eq",			__jpeq,		2,		0); } 
 	else if(strcmp(fname,"neq") == 0) 		{ result = JPATHFUNC("neq",		__jpneq,		2,		0); } 
@@ -1211,7 +1212,6 @@ JpathNode* functionFactory(const char*fname) {
 
 	else if(strcmp(fname,"key") == 0) 		{ result = JPATHFUNC("key",		__jpnoop,	-1,	1); } 
 	else if(strcmp(fname,"value") == 0) 	{ result = JPATHFUNC("value",		__jpnoop,	-1,	1); } 
-	else if(strcmp(fname,"group") == 0) 	{ result = JPATHFUNC("group",		__jpgroup,	1,	1); } 
 	else if(strcmp(fname,"sort") == 0) 		{ result = JPATHFUNC("sort",		__jpnoop,	-1,	1); } 
 
 	else { 

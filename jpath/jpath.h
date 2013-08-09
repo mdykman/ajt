@@ -34,12 +34,6 @@ typedef JsonNodeSet* (*jpathproc)(JsonNodeSet*context,struct JpathNode *array);
 		struct JpathNode *next;
 	} JpathNode;
 
-#define JPATHFUNC(nm,p,n,a) 		\
-	newJpathNode((p),(nm),NULL,NULL,(n),(a),NULL)
-	
-#define JPATHFUNCDATA(nm,p,d) \
-	newJpathNode((p),(nm),NULL,(d),0,0,NULL)
-
 #define JPATHAPPEND(ch,n)  								\
 	{																\
 		JpathNode *__it = (ch); 							\
@@ -53,10 +47,20 @@ int plistSize(JpathNode**);
 
 JpathNode* functionFactory(const char*fname);
 
-int compareJsonNodes(JsonNode*a,JsonNode*b);
+#define JPATHFUNC(nm,p,n,a) 		\
+	newJpathNode((p),(nm),NULL,NULL,(n),(a),NULL)
+	
+#define JPATHFUNCDATA(nm,p,d) \
+	newJpathNode((p),(nm),NULL,(d),0,0,NULL)
 
 JpathNode * newJpathNode(jpathproc proc, const char* name,JpathNode **params, JsonNode*data, int nargs, int ag, JpathNode *next) ;
 JpathNode* parseJpath(const char *s);
+
+JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
+JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
+
+int compareJsonNodes(JsonNode*a,JsonNode*b);
+
 
 JsonNodeSet * __jpnoop		(JsonNodeSet *ctx, JpathNode *p);
 JsonNodeSet * __jpevaldata	(JsonNodeSet *ctx, JpathNode *p);
@@ -114,8 +118,5 @@ JsonNodeSet*__jpcompare	(JsonNodeSet *ctx,JpathNode *jn,int(cmpop)(int)) ;
 
 JsonNodeSet * __jpunion(JsonNodeSet *ctx, JpathNode *p) ; 
 JsonNodeSet * __jpgroup(JsonNodeSet *ctx, JpathNode *p) ; 
-
-JsonNode *jpathExecute(JsonNode *ctx,JpathNode *jn) ;
-JsonNodeSet *__jpathExecute(JsonNodeSet *ctx,JpathNode *jn) ;
 
 #endif // end of file
