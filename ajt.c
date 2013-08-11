@@ -400,6 +400,39 @@ int addNodeToParent(JsonNode*p,JsonNode*c) {
 	@param, output node to parent
 
  */
+int jtlWriteFile(const char*fname,JsonNode *paths) {
+	FILE *outp = fopen(fname,"w");
+	jsonPrintToFile(outp,paths,JSONPRINT_PRETTY);
+}
+
+JsonNode *jtlCurl(const char*uri,JsonNode *options) {
+	char*tmpfile = "/tmp/curl-temp";
+	char buff[8192] = { 0 };
+	sprintf(buff,"curl ");
+	if(options != NULL && options->type == TYPE_OBJECT) {
+		// TODO:: what am I doi ng here?
+		JsonNode *data = jsonGetMember(options,"method");
+
+		data = jsonGetMember(options,"data");
+		if(data != NULL) {
+			JsonNode *pp=data->first;
+			while(pp) {
+			// TODO:: what am i doing with these parameters
+			}
+		}
+	}
+	sprintf(buff+strlen(buff),"\"%s\" > %s",uri,tmpfile);
+	int r = system(buff);
+	JsonNode *result = NULL;
+	if(r == 0) {
+		FILE *inp = fopen(tmpfile,"r");
+		result = jsonBuildJsonTreeFromFile(inp);
+		fclose(inp);
+		
+	}
+	return result;
+}
+
 JsonNode *jtlReadFile(JsonNode *paths) {
 	JsonNode * jsontree = NULL;
 	switch(paths->type) {
@@ -434,8 +467,14 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 				JpathNode *p =parseJpath(jtl->first->str);
 				// make sure the source context is never distrurbed
 				context = jsonCloneNode(context);
-				result = jpathExecute(context,p);
+				result = jpathExecute(engine,context,p);
 				freeJsonNode(context);
+				appendJsonNode(parent,result);
+			} else if(strcmp(jtl->str,"fetch") == 0) {
+				JsonNode *jn = jtl->first;
+				const char* uri = jn->str;
+				jn = jn->next;
+				result = jtlCurl(uri,jn);
 				appendJsonNode(parent,result);
 			} else if(strcmp(jtl->str,"file") == 0) {
 				result = jtlReadFile(jtl->first);
