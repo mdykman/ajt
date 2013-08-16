@@ -17,7 +17,7 @@ all: jpath ajt
 
 jpath: jpath/jpath.l.o jpath/jpath.y.o
 
-jpath/jpath.l.o jpath/jpath.y.o : jpath/jpath.y jpath/jpath.lex
+jpath/jpath.l.o jpath/jpath.y.o : jpath/jpath.y jpath/jpath.lex ajt.h
 	cd jpath && $(MAKE) all
 
 # fullset: ajt 
@@ -32,10 +32,13 @@ libajt.a	: ajson.l.o ajson.y.c
 libajt.so	: ajson.l.o ajson.y.c
 	${CC} -shared -Wl,-soname,libajt.so ajson.y.o ajson.l.o  -o libajt.so
 
+ajt.o : ajt.c ajt.h
+
+
 ajt : ajson.y.o ajson.l.o ajt.o  jpath/jpath.l.o jpath/jpath.y.o
 	${CC} ajson.y.o ajson.l.o ajt.o jpath/jpath.l.o jpath/jpath.y.o -lm -o ajt
 
-ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex
+ajson.y.c ajson.l.c ajson.y.h ajson.l.h : ajson.y ajson.lex ajt.h
 	flex  --header-file=ajson.l.h --prefix ${BISONPREFIX} -o ajson.l.c ajson.lex
 	yacc -p ${BISONPREFIX} -r all --defines=ajson.y.h -o ajson.y.c ajson.y
 

@@ -173,7 +173,7 @@ item
 				jax_default_callbacks.scalar($1,(long)d,d);
 			}
 		}
-		JSONFREE($1);
+//		JSONFREE($1);
   }
   | errorcase {
 		// TODO:: make certain that error case is not the ONLY item before repoting parse success.
@@ -282,7 +282,7 @@ opref : LABEL ':' {
    @$.last_column = @2.last_column;
    @$.last_line = @2.last_line;
 		if(jax_default_callbacks.key) jax_default_callbacks.key($1);
-		JSONFREE($1);
+//		JSONFREE($1);
 	}
 	| integer ':' { 
 	@$.first_column = @1.first_column;
@@ -434,13 +434,16 @@ int indenter() {
 
 
 void freeJsonNode(JsonNode*jn) {
+TRACE("freeJsonNode");
 	JsonNode*c = jn->first;
 	while(c) {
 		freeJsonNode(c);
 		c = c->next;
 	}
 	if(jn->str) JSONFREE(jn->str);
+TRACE("freeJsonNode 2");
 	JSONFREE(jn);
+TRACE("freeJsonNode 3");
 }
 
  int (*sjcb)(__JAXEVT type, const char* p, long i, double f) = NULL;
@@ -455,15 +458,23 @@ int parseJsonString(const char *s,int jtl) {
 }
 
 int parseJson() {
+	TRACE("");
 	if(jax_default_callbacks.startjson) jax_default_callbacks.startjson();
+	TRACE("");
 	int res = PARSE();
+	TRACE("");
 	if(res == 0 && jax_default_callbacks.endjson) jax_default_callbacks.endjson();
+	TRACE("");
 	return res;
 }
 int parseJsonFile(FILE *f,int jtl) {
+	TRACE("");
 	INPUTSTREAM = f == NULL ? stdin : f;
+	TRACE("");
 	setAllowJTL(jtl);
+	TRACE("");
 	int res = parseJson();
+	TRACE("");
 	return res;
 }
 
@@ -767,19 +778,29 @@ int jsonArrayAppend(JsonNode *array,JsonNode *ch) {
 	
 
 void jsonFreeInternal(JsonNode*js,int wide) {
+	TRACE("");
 	if(js->first) {
+	TRACE("");
 		jsonFreeInternal(js->first,1);
 	}
+	TRACE("");
 	JsonNode *next = js->next;
 
+	TRACE("");
 	if(js->str) JSONFREE(js->str);
+	TRACE("");
 	JSONFREE(js);
+	TRACE("");
 
 	if(wide) {
+	TRACE("");
 		if(next) {
+	TRACE("");
 			jsonFreeInternal(next,1);
 		}
+	TRACE("");
 	}
+	TRACE("");
 }
 void jsonFree(JsonNode*js) {
 	jsonFreeInternal(js,0);
@@ -935,12 +956,18 @@ JsonNode* jsonGetMember(JsonNode* obj,const char *name) {
 JsonNode* jsonBuildTreeFromFile(FILE *f,int jtl) {
 	JsonNode *tree = NULL;
 	jnstack = (JsonNode**) JSONALLOC(MINJSSTACK*sizeof(JsonNode*));
+TRACE("");
 	setCallBacks(node_builder_callback);
+TRACE("");
 	int res = parseJsonFile(f,jtl);
+TRACE("");
 	if(res == 0) {
+TRACE("");
 		tree=jnstack[0];
 	}
+TRACE("");
 	JSONFREE(jnstack);
+TRACE("");
 	return tree;
 }
 

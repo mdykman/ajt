@@ -22,7 +22,7 @@
 
 
 #define JSONALLOC(x) malloc(x)
-#define JSONFREE(x) free(x)
+#define JSONFREE(x) { free(x); TRACE("JSONFREE"); }
 
 typedef struct __jax_callbacks {
 	int (*startobject)();

@@ -249,6 +249,7 @@ int main(int argc, char *argv[])
     nsecs = 0;
     tfnd = 0;
 	 jsoutput = stdout;
+	 TRACE("");
     while ((opt = getopt(argc, argv, "j:btmpqdo:")) != -1) {
         switch (opt) {
 	        case 'm':
@@ -294,6 +295,7 @@ int main(int argc, char *argv[])
         }
     }
 
+	 TRACE("");
 	FILE * myinput = NULL;
 	// alternate input file
 	if(optind <  argc) {
@@ -303,6 +305,7 @@ int main(int argc, char *argv[])
 			exit(-2);
 		}
 	}
+	 TRACE("");
 	// alternate output file
 	if(filename != NULL) {
 		jsoutput = fopen(filename,"w");
@@ -312,11 +315,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	 TRACE("");
 	JsonNode * tree = jsonBuildJsonTreeFromFile(myinput == NULL ? stdin : myinput);
+	 TRACE("");
 	if(tree == NULL) {
 		exit(-4);
 	}
 
+	 TRACE("");
 	if(jtlfile != NULL) {
 		FILE *jtf = fopen(jtlfile,"r");
 		JsonNode * jtltree = jsonBuildJtlTreeFromFile(jtf);
@@ -331,7 +337,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	 TRACE("");
 	int oc = 0;
+	 TRACE("");
 	if(prettyprint) {
 		oc=jsonPrintToFile(jsoutput,tree,JSONPRINT_PRETTY);
 //	printf("line %d\n",__LINE__);
@@ -371,6 +379,7 @@ void jsonShowTree(FILE* out,JsonNode*js,int indent) {
 	}
 }
 
+/*
 int addNodeToParent(JsonNode*p,JsonNode*c) {
 	int result = 0;
 	switch(p->type) {
@@ -394,43 +403,46 @@ int addNodeToParent(JsonNode*p,JsonNode*c) {
 		jsonArrayAppend(p,c);
 	}
 }
-/** 
-	@param context, the current input data context
-	@param jtl, the current jtl instruction node 
-	@param, output node to parent
+*/
+ /// TODO:: make filenames unique and dynamic
+ /// TODO:: clean up files when done
 
- */
-int jtlWriteFile(const char*fname,JsonNode *paths) {
-	FILE *outp = fopen(fname,"w");
-	jsonPrintToFile(outp,paths,JSONPRINT_PRETTY);
+const char* jtlMd5(JsonNode *json) {
+	char*tmpfile = "/tmp/curl-temp";
+	char*md5file = "/tmp/md5-temp";
+	char buff[8192] = { 0 };
+
+	tmpfile = tmpnam(NULL);
+	jtlWriteFile(tmpfile,json);
+
+	md5file = tmpnam(NULL);
+	sprintf(buff,"md5sum %s > %s",tmpfile,md5file);
+	FILE *inp = fopen(md5file,"r");
+
+	char * res = JPATHALLOC(33);
+	fread(res,1,32,inp);
+	fclose(inp);
+	res[32] = 0;
+	return res;
+
 }
 
-JsonNode *jtlCurl(const char*uri,JsonNode *options) {
-	char*tmpfile = "/tmp/curl-temp";
-	char buff[8192] = { 0 };
-	sprintf(buff,"curl ");
-	if(options != NULL && options->type == TYPE_OBJECT) {
-		// TODO:: what am I doi ng here?
-		JsonNode *data = jsonGetMember(options,"method");
-
-		data = jsonGetMember(options,"data");
-		if(data != NULL) {
-			JsonNode *pp=data->first;
-			while(pp) {
-			// TODO:: what am i doing with these parameters
-			}
+void httpencode(char*buff,char*data) {
+	int counter = 0;
+	while(*data) {
+		if(isalnum(*data) || *data == '_') {
+			counter += sprintf(buff+counter,"%c",*data);
+		} else {
+			counter += sprintf(buff+counter,"%02x",*data);
 		}
 	}
-	sprintf(buff+strlen(buff),"\"%s\" > %s",uri,tmpfile);
-	int r = system(buff);
-	JsonNode *result = NULL;
-	if(r == 0) {
-		FILE *inp = fopen(tmpfile,"r");
-		result = jsonBuildJsonTreeFromFile(inp);
-		fclose(inp);
-		
-	}
-	return result;
+}
+
+int jtlWriteFile(const char*fname,JsonNode *paths) {
+	FILE *outp = fopen(fname,"w");
+	int r = jsonPrintToFile(outp,paths,JSONPRINT_PRETTY);
+	fclose(outp);
+	return r;
 }
 
 JsonNode *jtlReadFile(JsonNode *paths) {
@@ -454,6 +466,77 @@ JsonNode *jtlReadFile(JsonNode *paths) {
 		break;
 	}
 	return jsontree;
+}
+
+const char* curlParam(char*buff,const char*name,JsonNode*val) {
+	switch(val->type) {
+		case TYPE_NUMBER: {
+			if(val->ival == val->fval) {
+				sprintf(buff,"-F %s=%ld ",name,val->ival);
+			} else {
+				sprintf(buff,"-F %s=%f ",name,val->fval);
+			}
+		}
+		break;
+
+		case TYPE_STRING: {
+			sprintf(buff,"-F %s=",name);
+			httpencode(buff+strlen(buff),val->str);
+			sprintf(buff+strlen(buff)," ");
+		}
+		break;
+
+		case TYPE_ARRAY: {
+			JsonNode *ch = val->first;
+			while(ch) {
+				curlParam(buff+strlen(buff),name,ch);
+				ch = ch->next;
+			}
+		}
+		break;
+		case TYPE_OBJECT: {
+			char *tmpfile = tmpnam(NULL);
+			jtlWriteFile(tmpfile,val);
+			sprintf(buff,"<%s ",tmpfile);
+		}
+		break;
+	}
+}
+
+JsonNode *jtlCurl(const char*uri,JsonNode *options) {
+	char*tmpfile = "/tmp/curl-temp";
+	char buff[8192] = { 0 };
+	sprintf(buff,"curl ");
+	if(options != NULL && options->type == TYPE_OBJECT) {
+		// TODO:: what am I doi ng here?
+		JsonNode *data = jsonGetMember(options,"method");
+		data = jsonGetMember(options,"data");
+		if(data != NULL) {
+			JsonNode *pp=data->first;
+			while(pp) {
+				JsonNode *val = pp->first;
+				curlParam(buff+strlen(buff),pp->str,val);
+				pp = pp->next;
+			}
+		}
+	}
+	// TODO::  this is bad!!
+	tmpfile = tmpnam(NULL);
+	sprintf(buff+strlen(buff),"\"%s\" > %s",uri,tmpfile);
+
+#ifdef DEBUG
+	fprintf(stderr,"CURL command line: %s\n",buff);
+#endif
+
+	int r = system(buff);
+	JsonNode *result = NULL;
+	if(r == 0) {
+//		result = jtlReadFile(tmpfile);
+		FILE *inp = fopen(tmpfile,"r");
+		result = jsonBuildJsonTreeFromFile(inp);
+		fclose(inp);
+	}
+	return result;
 }
 
 JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*parent) {
