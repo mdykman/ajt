@@ -312,6 +312,7 @@ char* jsonToString(JsonNode *j) {
 		} else {
 			sprintf(buff,"%f",j->fval);
 		}
+		buff = realloc(buff,strlen(buff)+1);
 		return buff;
 	}
 	return "";
@@ -461,8 +462,8 @@ JsonNodeSet * newJsonNodeSet() {
 	return result;
 }
 
-JsonNodeSet* json2NodeSet(JsonNode *n) {
-	JsonNodeSet *rjns = newJsonNodeSet();
+JsonNodeSet* json2NodeSet(JsonNode *n,JsonNodeSet *in) {
+	JsonNodeSet *rjns = in == NULL ? newJsonNodeSet() : in;
 	JsonNode*p;
 	if(n->type == TYPE_ARRAY) {
 		p = n->first;
@@ -611,7 +612,7 @@ JsonNodeSet *__numeric(JtlEngine* engine,JsonNodeSet *ctx,JpathNode *jn,double (
 		JsonNode *n = context->nodes[i];
 		if(n->type == TYPE_NUMBER) {
 			double res = dfunc(n->fval);
-			if(res == NAN) {
+			if(isnan(res)) {
 				addJsonNode(rjns,jsonCreateNumber(NULL,0L,NAN));
 			} else {
 				addJsonNode(rjns,jsonCreateNumber(NULL,(long)res,res));
@@ -979,6 +980,7 @@ JsonNodeSet *__jpupper(JtlEngine* engine,JsonNodeSet *ctx,JpathNode *jn) {
 	return __jpul(engine,ctx,jn,toupper);
 }
 
+/*
 JsonNodeSet *__jpconcat(JtlEngine* engine,JsonNodeSet *ctx,JpathNode *jn) {
 	JSONTESTPARAMS(jn,-1);
 
@@ -1001,6 +1003,7 @@ JsonNodeSet *__jpconcat(JtlEngine* engine,JsonNodeSet *ctx,JpathNode *jn) {
 	}
 	return ctx;
 }
+*/
 
 JsonNodeSet * __jpavg(JtlEngine* engine,JsonNodeSet *ctx, JpathNode *p) {
 	JsonNodeSet * ns = newJsonNodeSet();
@@ -1363,12 +1366,75 @@ TRACE("jpgroup loop");
 	return rjns;
 }
 
+/*
 JsonNodeSet *__jpfunc(JtlEngine* engine,JsonNodeSet *ctx, JpathNode*p) {
 	const char*fname=p->name;
 	if(strcmp(fname,"size") == 0) {
 	} else {
 		return __jpudf(engine,ctx,p);
 	}
+}
+*/
+
+JsonNodeSet * __jpnumber(JtlEngine* engine,JsonNodeSet *ctx, JpathNode *p) {
+	int i;
+	JsonNodeSet *rjns= newJsonNodeSet();
+	for(i=0;i<ctx->count;++i) {
+		if(ctx->nodes[i]->type == TYPE_STRING) {
+			if(ctx->nodes[i]->str == NULL) {
+				addJsonNode(rjns,jsonCreateNull(NULL));
+			} else {
+				char*endp;
+				double fval = strtod(ctx->nodes[i]->str,&endp);
+				if(endp != ctx->nodes[i]->str) {
+					addJsonNode(rjns,jsonCreateNumber(NULL,(long)fval,fval);
+				} else {
+					addJsonNode(rjns,jsonCreateNumber(NULL,0,NAN));
+				}
+			}
+		} else if(ctx->nodes[i]->type == TYPE_NUMBER) {
+			addJsonNode(rjns,jsonCloneNode(ctx->nodes[i]));
+		} else if(ctx->nodes[i]->type == TYPE_ARRAY) {
+			JsonNodeSet *ins= newJsonNodeSet();
+			json2NodeSet(ctx->nodes[i],ins);
+			JsonNodeSet *res = __jpnumber(engine,ins,p);
+			addJsonNodeSet(rjns,res);
+			freeJsonNodeSet(res);
+			freeJsonNodeSet(ins);
+			
+		} else {
+			addJsonNode(rjns,jsonCreateNumber(NULL,0,NAN));
+		}
+	}
+	return rjns;
+}
+
+void __jpconcatRecurse(char*buff,JsonNode*ctx, JpathNode *p) {
+	if(*p->params != NULL) {
+		JpathNode *pp = *(p->params);
+		JsonNode *jn = jpathExecute(engine,ctx,pp);
+		if(jn->type == TYPE_STRING || jn->type == TYPE_NUMBER) {
+			char*str = jsonToString(jn);
+			strcat(buff,str);
+			JPATHFREE(str);
+		} else {
+		}
+		__jpconcatRecurse(buff,ctx,++(p->params));
+
+		--(p->params);
+	}
+//	return (char*) JPATHREALLOC
+}
+
+JsonNodeSet * __jpconcat(JtlEngine* engine,JsonNodeSet *ctx, JpathNode *p) {
+	int i;
+	char*buff = (char*) JPATHALLOC(8192);
+	JsonNodeSet *rjns= newJsonNodeSet();
+	for(i=0;i<ctx->count;++i) {
+		if(ctx->nodes[i]->type == TYPE_ARRAY) {
+		}
+	}
+
 }
 
 JsonNodeSet * __jpudf(JtlEngine* engine,JsonNodeSet *ctx, JpathNode *p) {
@@ -1443,11 +1509,11 @@ fprintf(stderr,"\n");
 	TRACE("itemized");
 		rjns = newJsonNodeSet();
 		if(ctx->count > 0) {
-// we are going to resuse the same nodeset over and over, only
+// we are going to reuse the same nodeset over and over, only
 // swapping out the single json node therein contained
 // so I seed it with a dummy
 			JsonNodeSet *params = newJsonNodeSet();
-			addJsonNode(params, jsonCreateNumber(NULL,0,0));
+			addJsonNode(params, jsonCreateNull(NULL));
 			jsonFree(params->nodes[0]);
 
 TRACE("exec");
@@ -1458,7 +1524,6 @@ TRACE("context");
 TRACEJSON(ctx->nodes[i]);
 				if(ctx->nodes[i]->type == TYPE_ARRAY) {
 TRACE("array");
-//					JsonNode *arr = jsonCreateArray(NULL);
 					JsonNode*el = ctx->nodes[i]->first;
 					while(el) {
 						params->nodes[0] = el;

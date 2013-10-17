@@ -331,10 +331,13 @@ int main(int argc, char *argv[])
 		}
 	
 		fclose(jtf);
+	 TRACE("");
 		tree = jtlTransform(jtltree,tree);
+	 TRACE("");
 		if(tree == NULL) {
 			exit(-6);
 		}
+	 TRACE("");
 	}
 
 	 TRACE("");
@@ -427,17 +430,6 @@ const char* jtlMd5(JsonNode *json) {
 
 }
 
-void httpencode(char*buff,char*data) {
-	int counter = 0;
-	while(*data) {
-		if(isalnum(*data) || *data == '_') {
-			counter += sprintf(buff+counter,"%c",*data);
-		} else {
-			counter += sprintf(buff+counter,"%02x",*data);
-		}
-	}
-}
-
 int jtlWriteFile(const char*fname,JsonNode *paths) {
 	FILE *outp = fopen(fname,"w");
 	int r = jsonPrintToFile(outp,paths,JSONPRINT_PRETTY);
@@ -468,61 +460,100 @@ JsonNode *jtlReadFile(JsonNode *paths) {
 	return jsontree;
 }
 
-const char* curlParam(char*buff,const char*name,JsonNode*val) {
+int httpencode(char*buff,char*data) {
+	int counter = 0;
+	while(*data) {
+		if(isalnum(*data) || *data == '_' || *data == '-' || *data == '.' || *data == '~') {
+			counter += sprintf(buff+counter,"%c",*data);
+		} else {
+			counter += sprintf(buff+counter,"%%%02x",*data);
+		}
+		++data;
+	}
+	return counter;
+}
+
+int curlParam(char*buff,const char*name,JsonNode*val) {
+	int offset = 0;
 	switch(val->type) {
 		case TYPE_NUMBER: {
+TRACE("");
 			if(val->ival == val->fval) {
-				sprintf(buff,"-F %s=%ld ",name,val->ival);
+				offset += sprintf(buff,"-F %s=%ld ",name,val->ival);
 			} else {
-				sprintf(buff,"-F %s=%f ",name,val->fval);
+				offset += sprintf(buff,"-F %s=%f ",name,val->fval);
 			}
 		}
 		break;
 
 		case TYPE_STRING: {
-			sprintf(buff,"-F %s=",name);
-			httpencode(buff+strlen(buff),val->str);
-			sprintf(buff+strlen(buff)," ");
+TRACE("");
+			offset+=sprintf(buff,"-F %s=",name);
+TRACE("");
+			offset+=httpencode(buff+offset,val->str);
+TRACE("");
+			offset += sprintf(buff+offset," ");
+TRACE("");
 		}
 		break;
 
 		case TYPE_ARRAY: {
+TRACE("");
 			JsonNode *ch = val->first;
 			while(ch) {
-				curlParam(buff+strlen(buff),name,ch);
+				offset+=curlParam(buff+offset,name,ch);
 				ch = ch->next;
 			}
 		}
 		break;
 		case TYPE_OBJECT: {
+TRACE("");
 			char *tmpfile = tmpnam(NULL);
 			jtlWriteFile(tmpfile,val);
-			sprintf(buff,"<%s ",tmpfile);
+			offset += sprintf(buff,"<%s ",tmpfile);
 		}
 		break;
 	}
+TRACE("");
+	return offset;
 }
 
 JsonNode *jtlCurl(const char*uri,JsonNode *options) {
 	char*tmpfile = "/tmp/curl-temp";
 	char buff[8192] = { 0 };
-	sprintf(buff,"curl ");
+	int offset = 0;
+TRACE("");
+	offset+=sprintf(buff,"curl ");
 	if(options != NULL && options->type == TYPE_OBJECT) {
+TRACE("");
 		// TODO:: what am I doi ng here?
 		JsonNode *data = jsonGetMember(options,"method");
-		data = jsonGetMember(options,"data");
 		if(data != NULL) {
+			if(strcasecmp("get",data->str) == 0) {
+				offset+=sprintf(buff+offset,"-get ");
+			} else {
+				offset+=sprintf(buff+offset,"-H _Method:%s ",data->str);
+			}
+		}
+TRACE("");
+		data = jsonGetMember(options,"data");
+TRACE("");
+		if(data != NULL) {
+TRACE("");
 			JsonNode *pp=data->first;
 			while(pp) {
+TRACE("");
 				JsonNode *val = pp->first;
-				curlParam(buff+strlen(buff),pp->str,val);
+TRACE("");
+				offset+=curlParam(buff+offset,pp->str,val);
+TRACE("");
 				pp = pp->next;
 			}
 		}
 	}
 	// TODO::  this is bad!!
 	tmpfile = tmpnam(NULL);
-	sprintf(buff+strlen(buff),"\"%s\" > %s",uri,tmpfile);
+	offset+=sprintf(buff+offset,"\"%s\" > %s",uri,tmpfile);
 
 #ifdef DEBUG
 	fprintf(stderr,"CURL command line: %s\n",buff);
@@ -543,8 +574,10 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 	JsonNode*result = NULL;
 	JsonNode*it;
 	char buf[1024];
+TRACE("");
 	if(jtl!=NULL) switch(jtl->type) {
 		case TYPE_FUNC:
+TRACE("");
 			if(strcmp(jtl->str,"jpath") == 0) {
 				if(jtl->first == NULL) return NULL;
 				JpathNode *p =parseJpath(jtl->first->str);
@@ -554,15 +587,21 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 				freeJsonNode(context);
 				appendJsonNode(parent,result);
 			} else if(strcmp(jtl->str,"fetch") == 0) {
+TRACE("");
 				JsonNode *jn = jtl->first;
 				const char* uri = jn->str;
 				jn = jn->next;
+
+TRACE("");
 				result = jtlCurl(uri,jn);
+TRACE("");
 				appendJsonNode(parent,result);
 			} else if(strcmp(jtl->str,"file") == 0) {
+TRACE("");
 				result = jtlReadFile(jtl->first);
 				appendJsonNode(parent,result);
 			} else {
+TRACE("");
 				JsonNode*udf = jsonGetMember(engine->reference,jtl->str);
 				if(udf == NULL) {
 					sprintf(buf,"!!UDF '%s' not found; ignoring!!\n",jtl->str);
@@ -574,6 +613,7 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 			}
 		break;
 		case TYPE_ARRAY:
+TRACE("");
 			result = jsonCreateArray(parent);
 			it = jtl->first;
 			while(it != NULL) {
@@ -582,6 +622,7 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 			}
 		break;
 		case TYPE_OBJECT:
+TRACE("");
 			result = jsonCreateObject(parent);
 			it = jtl->first;
 			while(it != NULL) {
@@ -590,16 +631,20 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 			}
 		break;
 		case TYPE_ELEMENT:
+TRACE("");
 			result = jsonCreateElement(parent,jtl->str);
 			jtlTraverse(engine,jtl->first,context,result);
 		break;
 		case TYPE_STRING:
+TRACE("");
 			result = jsonCreateString(parent,jtl->str);
 		break;
 		case TYPE_NUMBER:
+TRACE("");
 			result = jsonCreateNumber(parent,jtl->ival,jtl->fval);
 		break;
 		default: {
+TRACE("");
 			sprintf(buf,"unknown type in traverse: %d\n",jtl->type);
 			result = jsonCreateString(parent,strdup(buf));
 			fprintf(stderr,"%s",buf);
@@ -610,15 +655,21 @@ JsonNode *jtlTraverse(JtlEngine*engine,JsonNode *jtl,JsonNode* context,JsonNode*
 }
 JsonNode *jtlTransform(JsonNode*jtl,JsonNode *json) {
 	JtlEngine engine = { jtl };
+TRACE("");
 //	engine.reference = jtl;
 	JsonNode *ex = jsonGetMember(jtl,"jtldefault");
+TRACE("");
 	if(ex == NULL) {
 		ex = jtl;
 	} else {
 // seed engine with init constants
+TRACE("");
 		JsonNode *init=jsonGetMember(jtl,"jtlinit");
+TRACE("");
 	}
+TRACE("");
 	JsonNode *result = jtlTraverse(&engine,ex,json,NULL);
+TRACE("");
 	return result;
 }
 

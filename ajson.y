@@ -72,10 +72,12 @@ extern const jax_callbacks single_callback ;
 %%     
 
 jsonp : LABEL '(' json ')' endp { /* jsonp */
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @4.last_column ;
    @$.last_line = @4.last_line ;
+TRACE("");
 		if($3 == -1) {
 		// the only item is an error
 			YYABORT;
@@ -84,6 +86,7 @@ jsonp : LABEL '(' json ')' endp { /* jsonp */
 	| json endp
 
 json : item {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -95,6 +98,7 @@ json : item {
 	}
 
 endp : ';' {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -109,6 +113,7 @@ endp : ';' {
 
 item 
 	: object {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -116,6 +121,7 @@ item
 		$$ = 1;
 	}
   	| array {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -123,15 +129,21 @@ item
 		$$ = 1;
   }
   | NULLVAL {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
    @$.last_line = @1.last_line;
+TRACE("");
 		$$ = 1;
+TRACE("");
   		if(jax_default_callbacks.string) jax_default_callbacks.string(NULL);
+TRACE("");
 		if(jax_default_callbacks.scalar) jax_default_callbacks.scalar(NULL,0,NAN);
+TRACE("");
   }
   | integer {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -145,6 +157,7 @@ item
 		}
   }
   | FLOAT {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -158,6 +171,7 @@ item
 		}
   }
   | string {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -176,6 +190,7 @@ item
 //		JSONFREE($1);
   }
   | errorcase {
+TRACE("");
 		// TODO:: make certain that error case is not the ONLY item before repoting parse success.
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
@@ -194,15 +209,18 @@ item
 
 
 integer : INTEGER { 
+TRACE("");
 //printf("INTEGER %ld\n",$1);
 		$$ = $1; 
 	}
 	| TOK_BOOL { 
+TRACE("");
 //printf("BOOL %ld\n",$1);
 		$$ = $1; 
 	}
 
 func : funcstart funcend  {
+TRACE("");
 		if(!jsonParserAllowJTL) {
 			yyerror("functions not allow in strict json");
 			YYABORT;
@@ -211,10 +229,12 @@ func : funcstart funcend  {
 	
 
 funcstart : LABEL '('  {
+TRACE("");
 		if(jax_default_callbacks.startfunc) jax_default_callbacks.startfunc($1);
 	}
 
 funcend : plist ')' {
+TRACE("");
 		if(jax_default_callbacks.endfunc) jax_default_callbacks.endfunc();
 	}
 
@@ -224,12 +244,14 @@ plist
 	|
 
 object : sobj olist  listend eobj {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @4.last_column;
    @$.last_line = @4.last_line;
 	}	
    | sobj eobj {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -237,18 +259,21 @@ object : sobj olist  listend eobj {
 	}
 
 olist : oitem {
+TRACE("");
 	@$.first_column = @1.first_column;
 
    @$.last_column = @1.last_column;
    @$.last_line = @1.last_line;
 	}
    | olist ',' oitem  {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @3.last_column;
    @$.last_line = @3.last_line;
 	}
 	| olist oitem {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -262,6 +287,7 @@ olist : oitem {
 	}
 
 oitem : opref alistitem  {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -269,14 +295,16 @@ oitem : opref alistitem  {
 	}
 
 opref : LABEL ':' { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
    @$.last_line = @2.last_line;
 		if(jax_default_callbacks.key) jax_default_callbacks.key($1);
-		JSONFREE($1);
+//		JSONFREE($1);
 	}
    | string ':' { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -285,6 +313,7 @@ opref : LABEL ':' {
 //		JSONFREE($1);
 	}
 	| integer ':' { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -294,6 +323,7 @@ opref : LABEL ':' {
 		if(jax_default_callbacks.key) jax_default_callbacks.key(buff);
 	}
    | FLOAT ':' { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -304,12 +334,14 @@ opref : LABEL ':' {
 	}
 
 array : sarr alist listend earr {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @4.last_column;
    @$.last_line = @4.last_line;
 	}
    | sarr earr {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
@@ -317,42 +349,57 @@ array : sarr alist listend earr {
 	}
 
 sobj : '{' {
+TRACE("");
 		if(jax_default_callbacks.startobject) jax_default_callbacks.startobject();
  }
 eobj : '}' {
+TRACE("");
 		if(jax_default_callbacks.endobject) jax_default_callbacks.endobject();
  }
 sarr : '[' {
+TRACE("");
 		if(jax_default_callbacks.startarray) jax_default_callbacks.startarray();
  }
 earr : ']' {
+TRACE("");
 		if(jax_default_callbacks.endarray) jax_default_callbacks.endarray();
  }
 
 alistitem
-	: item { $$ = 1; }
-	| func { $$ = 1; }
+	: item { 
+TRACE("");
+	$$ = 1; 
+}
+	| func { 
+TRACE("");
+	$$ = 1; 
+}
 
 alist : alistitem {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
    @$.last_line = @1.last_line;
 	}
    | alist ',' alistitem {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @3.last_column;
    @$.last_line = @3.last_line;
 	}
 	| alist alistitem { /* correctable syntax error */
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @2.last_column;
    @$.last_line = @2.last_line;
 		if(jsonParserAllowErrors) {
+TRACE("");
 			yywarning("missing comma between array elements");
 		} else {
+TRACE("");
 			yyerror("missing comma between array elements");
 			YYERROR;
 			jsonparserabort(-1);
@@ -360,15 +407,18 @@ alist : alistitem {
 	}
 
 listend : ',' {
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
    @$.last_line = @1.last_line;
 		if(jsonParserAllowErrors) {
+TRACE("");
 			yywarning("extra comma at list and");
 		}
 	}
    | {
+TRACE("");
 	@$.first_column = -1;
    @$.first_line = -1;
    @$.last_column = -1;
@@ -376,6 +426,7 @@ listend : ',' {
 	}
 
 string : sstr { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
    @$.last_column = @1.last_column;
@@ -383,19 +434,36 @@ string : sstr {
 		$$ = $1; 
 	}
    | dstr { 
+TRACE("");
 	@$.first_column = @1.first_column;
    @$.first_line = @1.first_line;
 	}
 
-sstr : '\''  chars '\'' { $$ = $2; }
-	| '\''  '\'' { $$ =""; }
+sstr : '\''  chars '\'' { 
+TRACE("");
+	$$ = $2; 
+}
+	| '\''  '\'' { 
+TRACE("");
+	$$ =""; 
+}
 
-dstr : '"' chars '"' { $$ = $2; }
-	|  '"' '"' { $$ =""; }
+dstr : '"' chars '"' { 
+TRACE("");
+	$$ = $2; 
+}
+	|  '"' '"' { 
+TRACE("");
+	$$ =""; 
+}
 
 chars 
-	: CHAR { $$ = $1; }
+	: CHAR { 
+TRACE("");
+		$$ = $1; 
+	}
 	| chars CHAR {
+TRACE("");
 		int n = strlen($1) + strlen($2) + 1;
 		$$ = (char*) JSONALLOC(n);
 		strcpy($$,$1);
@@ -467,6 +535,7 @@ int parseJson() {
 	TRACE("");
 	return res;
 }
+
 int parseJsonFile(FILE *f,int jtl) {
 	TRACE("");
 	INPUTSTREAM = f == NULL ? stdin : f;
@@ -479,17 +548,23 @@ int parseJsonFile(FILE *f,int jtl) {
 }
 
 JsonNode * jsonBuildJtlTreeFromString(const char*s) {
+TRACE("");
 	return jsonBuildTreeFromString(s,1);
 }
 JsonNode * jsonBuildJtlTreeFromFile(FILE*f) {
+TRACE("");
 	return jsonBuildTreeFromFile(f,1);
 }
 
 JsonNode * jsonBuildJsonTreeFromString(const char*s) {
+TRACE("");
 	return jsonBuildTreeFromString(s,0);
 }
 JsonNode * jsonBuildJsonTreeFromFile(FILE*f) {
-	return jsonBuildTreeFromFile(f,0);
+TRACE("");
+	JsonNode *res = jsonBuildTreeFromFile(f,0);
+TRACE("");
+	return res;
 }
 
 int yywarning(const char *p) {
@@ -729,7 +804,12 @@ JsonNode* jsonCreateKey(JsonNode*p,const char*str) {
 }
 
 JsonNode* jsonCreateString(JsonNode*p,const char*str) {
-	return jsonNewNode(p,TYPE_STRING,strdup(str),0L,NAN);
+	JsonNode* result = NULL;
+	if(str == NULL) {
+		result = jsonNewNode(p,TYPE_STRING,NULL,0L,NAN);
+	} else {
+		result = jsonNewNode(p,TYPE_STRING,strdup(str),0L,NAN);
+	}
 }
 
 JsonNode* jsonCreateElement(JsonNode*p,const char*str) {
@@ -1007,7 +1087,9 @@ TRACE("");
 	}
 	
 	int nbcb_string(const char*p) {
+TRACE("");
 		jsonCreateString(JSONPARENT,p);
+TRACE("");
 		FIXSTACK(jnstack,jnstackptr);
 	}
 	
